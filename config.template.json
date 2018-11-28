@@ -26,6 +26,19 @@
 			}
 		]
 	},
+	"tegrastats":{
+		"interval": 200,
+		"events":[
+			{
+				"event": "emc.bandwidth%",
+				"alias": "emcbw"
+			},
+			{
+				"event": "GR3D_UTIL",
+				"alais": "gpuUtil"
+			}
+		]
+	},
 	"rabbitMQ": {
 		"host": "localhost",
 		"queue_name": {

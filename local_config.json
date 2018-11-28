@@ -1,0 +1,38 @@
+{
+	"workloads": [
+		{
+			"name": "streamcluster",
+			"type": "fg",
+			"num_of_threads": 8,
+			"binding_cores": "0-7",
+			"cpu_freq": 2.1,
+			"cpu_percent": 100,
+			"cbm_ranges": "0-10"
+		},
+		{
+			"name": "streamcluster",
+			"type": "bg",
+			"num_of_threads": 8,
+			"binding_cores": "8-15",
+			"numa_nodes": "0",
+			"cpu_freq": 2.1,
+			"cpu_percent": 50,
+			"cbm_ranges": [
+				"0-1",
+				"10-20"
+			]
+		},
+		{
+			"name": "streamcluster",
+			"type": "bg",
+			"binding_cores": "8-15"
+		}
+	],
+	"launcher": {
+		"hyper-threading": false,
+		"stops_with_the_first": false,
+		"post_scripts": [
+			"avg_csv.py"
+		]
+	}
+}

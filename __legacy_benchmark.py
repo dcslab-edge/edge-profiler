@@ -18,8 +18,10 @@ from coloredlogs import ColoredFormatter
 from pika.adapters.blocking_connection import BlockingChannel
 
 from benchmark.driver.base_driver import BenchDriver
-from containers import BenchConfig, PerfConfig, RabbitMQConfig,TegraConfig
-from .utils.numa_topology import NumaTopology
+from containers.bench_config import BenchConfig
+from containers.perf_config import PerfConfig
+from containers.tegra_config import TegraConfig
+from containers.rabbit_mq_config import RabbitMQConfig
 
 
 class Benchmark:
@@ -59,16 +61,14 @@ class Benchmark:
             '%(asctime)s.%(msecs)03d [%(levelname)s] (%(funcName)s:%(lineno)d in %(filename)s) $ %(message)s')
     _stream_formatter = ColoredFormatter('%(asctime)s.%(msecs)03d [%(levelname)8s] %(name)14s $ %(message)s')
 
-    def __init__(self, identifier: str, bench_config: BenchConfig, perf_config: PerfConfig, tegra_config: TegraConfig,
+    def __init__(self, identifier: str, bench_config: BenchConfig, perf_config: PerfConfig,
                  rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
         self._identifier: str = identifier
         self._perf_config: PerfConfig = perf_config
-        self._tegra_config:TegraConfig = tegra_config
         self._rabbit_mq_config: RabbitMQConfig = rabbit_mq_config
 
-        self._bench_driver: BenchDriver = bench_config.generate_driver(identifier)
+        self._bench_driver: BenchDriver = bench_config.generate_driver()
         self._perf: Optional[asyncio.subprocess.Process] = None
-        self._tegra: Optional[asyncio.subprocess.Process] = None
         self._end_time: Optional[float] = None
 
         perf_parent = workspace / 'perf'
@@ -76,13 +76,6 @@ class Benchmark:
             perf_parent.mkdir()
 
         self._perf_csv: Path = perf_parent / f'{identifier}.csv'
-
-        tegra_parent = workspace / 'tegrastats'
-        if not tegra_parent.exists():
-            tegra_parent.mkdir()
-
-        self._tegra_csv: Path = tegra_parent / f'{identifier}.csv'
-
 
         log_parent = workspace / 'logs'
         if not log_parent.exists():
@@ -115,15 +108,11 @@ class Benchmark:
             stream_handler.setFormatter(Benchmark._stream_formatter)
             logger.addHandler(stream_handler)
 
-        # retrieve host numa info
-        #FIXME: legacy diff
-        #self._bench_driver._host_numa_info = await NumaTopology.get_numa_info()
-
         # launching benchmark
 
         logger.info('Starting benchmark...')
         await self._bench_driver.run()
-        logger.info(f'The {self._bench_driver.wl_type} benchmark has started. pid : {self._bench_driver.pid}')
+        logger.info(f'The benchmark has started. pid : {self._bench_driver.pid}')
 
         self._pause_bench()
 
@@ -140,8 +129,7 @@ class Benchmark:
 
             # setup for metric logger
 
-            rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
-                                                self._bench_driver.wl_type, self._bench_driver.pid,
+            rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._identifier, self._bench_driver.pid,
                                                 self._perf.pid, self._perf_config.interval)
             rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names))
 
@@ -151,28 +139,19 @@ class Benchmark:
             if print_metric_log:
                 metric_logger.addHandler(logging.StreamHandler())
 
-            with self._perf_csv.open('w') as fp:
+            with open(self._perf_csv, 'w') as fp:
                 # print csv header
-                #FIXME: legacy diff
                 fp.write(','.join(self._perf_config.event_names) + '\n')
-                #fp.write(','.join(chain(self._perf_config.event_names,
-                #                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))) + '\n')
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
             # perf polling loop
 
             num_of_events = len(self._perf_config.events)
-            #FIXME: legacy diff
-            #if self._perf_config.interval < 100:
-                # remove warning message of perf from buffer
-            #    await self._perf.stderr.readline()
 
-            #prev_tsc = rdtsc.get_cycles()
-            #_, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
             while self._bench_driver.is_running and self._perf.returncode is None:
                 record = []
                 ignore_flag = False
-
+		
                 for _ in range(num_of_events):
                     raw_line = await self._perf.stderr.readline()
                     line = raw_line.decode().strip()
@@ -185,20 +164,8 @@ class Benchmark:
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
                                      f' and the line is : {line}')
 
-                #FIXME: legacy diff
-                #tmp = rdtsc.get_cycles()
-                #record.append(str(tmp - prev_tsc))
-                #prev_tsc = tmp
-
-                #llc_occupancy, local_mem, total_mem = await self._bench_driver.read_resctrl()
-                #record.append(str(llc_occupancy))
-
-                #cur_local_mem = local_mem - prev_local_mem
-                #record.append(str(cur_local_mem))
-                #prev_local_mem = local_mem
-
-                #record.append(str(max(total_mem - prev_total_mem - cur_local_mem, 0)))
-                #prev_total_mem = total_mem
+                # GPU metric collection from `tegrastats`
+                    
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
@@ -207,18 +174,8 @@ class Benchmark:
 
             self._kill_perf()
 
-
-
-            #launching tegarastats
-#            self._tegra = await asyncio.create_subprocess_exec(
-#                'tegrastats','--interval' ,str(self._tegra_config.interval), '--save_cfg', ''
-#            )
-
-#            self._kill_tegra()
-
-
         except CancelledError as e:
-            logger.debug(f'The task cancelled : {ex}')
+            logger.debug(f'The task cancelled : {e}')
             self._stop()
 
         finally:
@@ -228,7 +185,6 @@ class Benchmark:
             except (psutil.NoSuchProcess, ProcessLookupError):
                 pass
 
-            await self._bench_driver.cleanup()
             logger.info('The benchmark is ended.')
             self._remove_logger_handlers()
             self._end_time = time.time()
@@ -241,8 +197,6 @@ class Benchmark:
     def pause(self):
         self._pause_bench()
         self._perf.send_signal(SIGSTOP)
-        # Tegrastats
-        self._tegra.send_signal(SIGSTOP)
 
     @_Decorators.ensure_running
     def resume(self):
@@ -251,20 +205,11 @@ class Benchmark:
         self._bench_driver.resume()
         if self._perf is not None and self._perf.returncode is None:
             self._perf.send_signal(SIGCONT)
-        # Tegrastats
-        if self._tegra is not None and self._tegra.returncode is None:
-            self._tegra.send_signal(SIGCONT)
 
     def _kill_perf(self):
         if self._perf is not None and self._perf.returncode is None:
             self._perf.kill()
         self._perf = None
-
-    # Tegrastats
-    def _kill_tegra(self):
-        if self._tegra is not None and self._tegra.returncode is None:
-            self._tegra.kill()
-        self._tegra = None
 
     def _stop(self):
         logger = logging.getLogger(self._identifier)
@@ -272,7 +217,6 @@ class Benchmark:
 
         try:
             self._kill_perf()
-            self._kill_tegra()
             self._bench_driver.stop()
         except (psutil.NoSuchProcess, ProcessLookupError) as e:
             logger.debug(f'Process already killed : {e}')
@@ -324,7 +268,7 @@ class Benchmark:
 
 class RabbitMQHandler(Handler):
     def __init__(self, rabbit_mq_config: RabbitMQConfig,
-                 bench_name: str, bench_type: str, bench_pid: int, perf_pid: int, perf_interval: int):
+                 bench_name: str, bench_pid: int, perf_pid: int, perf_interval: int):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -336,7 +280,7 @@ class RabbitMQHandler(Handler):
         # Notify creation of this benchmark to scheduler
         self._channel.queue_declare(queue=rabbit_mq_config.creation_q_name)
         self._channel.basic_publish(exchange='', routing_key=rabbit_mq_config.creation_q_name,
-                                    body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval}')
+                                    body=f'{bench_name},{bench_pid},{perf_pid},{perf_interval}')
 
     def emit(self, record: LogRecord):
         formatted: str = self.format(record)
@@ -359,7 +303,7 @@ class RabbitMQHandler(Handler):
 class RabbitMQFormatter(Formatter):
     def __init__(self, events: Generator[str, Any, None]):
         super().__init__()
-        self._event_names = tuple(events) + ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem', 'req_num')
+        self._event_names = tuple(events) + ('wall_cycles', 'llc_occupancy', 'req_num')
         self._req_num = 0
 
     @staticmethod
