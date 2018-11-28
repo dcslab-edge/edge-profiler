@@ -165,8 +165,8 @@ class BenchDriver(metaclass=ABCMeta):
         self._async_proc = await self._launch_bench()
         self._async_proc_info = psutil.Process(self._async_proc.pid)
 
-        #nodes = await NumaTopology.get_node_topo()
-
+        # nodes = await NumaTopology.get_node_topo()
+        #
         # # Masks for cbm_mask
         # masks = [ResCtrl.MIN_MASK] * (max(nodes) + 1)
         #
@@ -196,9 +196,9 @@ class BenchDriver(metaclass=ABCMeta):
             self._bench_proc_info = self._find_bench_proc()
             if self._bench_proc_info is not None:
                 await self._rename_group(f'{self._name}_{self._bench_proc_info.pid}')
-                await self._resctrl_group.create_group()
-                await self._resctrl_group.assign_llc(*masks)
-                await self._resctrl_group.add_tasks(self.all_child_tid())
+                # await self._resctrl_group.create_group()
+                # await self._resctrl_group.assign_llc(*masks)
+                # await self._resctrl_group.add_tasks(self.all_child_tid())
                 return
             await asyncio.sleep(0.1)
 
@@ -250,24 +250,26 @@ class BenchDriver(metaclass=ABCMeta):
         self._group_name = new_name
 
         await self._cgroup.rename(new_name)
-        self._resctrl_group.group_name = self._group_name
+        # self._resctrl_group.group_name = self._group_name
 
     async def cleanup(self) -> None:
         await self._cgroup.delete()
-        await self._resctrl_group.delete()
+        # await self._resctrl_group.delete()
 
-    def read_resctrl(self) -> Coroutine[None, None, Tuple[int, int, int]]:
-        return self._resctrl_group.read()
+    # def read_resctrl(self) -> Coroutine[None, None, Tuple[int, int, int]]:
+        # return self._resctrl_group.read()
 
 
 def find_driver(workload_name) -> Type[BenchDriver]:
-    from benchmark.driver.spec_driver import SpecDriver
-    from benchmark.driver.parsec_driver import ParsecDriver
-    from benchmark.driver.rodinia_driver import RodiniaDriver
-    from benchmark.driver.npb_driver import NPBDriver
+    # from benchmark.driver.spec_driver import SpecDriver
+    # from benchmark.driver.parsec_driver import ParsecDriver
+    # from benchmark.driver.rodinia_driver import RodiniaDriver
+    # from benchmark.driver.npb_driver import NPBDriver
+    from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 
-    bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
-
+    #bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
+    bench_drivers = (SparkGPUDriver,)
+    print(bench_drivers)
     for driver in bench_drivers:
         if driver.has(workload_name):
             return driver
@@ -279,6 +281,7 @@ def bench_driver(workload_name: str, workload_type: str, identifier: str, bindin
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
                  cbm_ranges: Union[str, List[str]] = None) \
         -> BenchDriver:
+    print("WORKLOAD:"+workload_name)
     _bench_driver = find_driver(workload_name)
 
     return _bench_driver(workload_name, workload_type, identifier, binding_cores, num_threads, numa_mem_nodes,

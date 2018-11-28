@@ -251,7 +251,7 @@ GLOBAL_CFG_PATH: Path = Path(__file__).resolve().parent / 'config.json'
 
 def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, print_metric_log: bool, verbose: bool):
     print("launched")
-    config_file = workspace / 'local_config.json'
+    config_file = workspace / 'config.json'
 
     if not workspace.exists():
         print(f'{workspace.resolve()} is not exist.', file=sys.stderr)
@@ -266,7 +266,7 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
         global_cfg_source: Dict[str, Any] = json.load(global_config_fp)
         bench_cfgs = parse_workload_cfg(local_cfg_source['workloads'])
         perf_cfg = parse_perf_cfg(global_cfg_source['perf'], local_cfg_source.get('perf', {'extra_events': []}))
-        tegra_cfg = parse_perf_cfg(global_cfg_source['perf'], local_cfg_source.get('perf',{'extra_events':[]}))
+        tegra_cfg = parse_perf_cfg(global_cfg_source['tegrastats'], local_cfg_source.get('tegrastas',{'extra_events':[]}))
         rabbit_cfg = parse_rabbit_mq_cfg(global_cfg_source['rabbitMQ'])
         launcher_cfg = parse_launcher_cfg(local_cfg_source.get('launcher'))
 

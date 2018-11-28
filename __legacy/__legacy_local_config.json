@@ -4,7 +4,7 @@
 			"name": "streamcluster",
 			"type": "fg",
 			"num_of_threads": 8,
-			"binding_cores": "0-7",
+			"binding_cores": "0-2",
 			"cpu_freq": 2.1,
 			"cpu_percent": 100,
 			"cbm_ranges": "0-10"
@@ -13,7 +13,7 @@
 			"name": "streamcluster",
 			"type": "bg",
 			"num_of_threads": 8,
-			"binding_cores": "8-15",
+			"binding_cores": "3-5",
 			"numa_nodes": "0",
 			"cpu_freq": 2.1,
 			"cpu_percent": 50,
@@ -25,7 +25,7 @@
 		{
 			"name": "streamcluster",
 			"type": "bg",
-			"binding_cores": "8-15"
+			"binding_cores": "3-5"
 		}
 	],
 	"launcher": {
