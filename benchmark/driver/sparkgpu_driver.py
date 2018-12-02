@@ -12,7 +12,7 @@ from benchmark.driver.base_driver import BenchDriver
 
 class SparkGPUDriver(BenchDriver):
     _benches: Set[str] = {'GpuDSArrayMult', 'GpuEnablerExample', 'GpuEnablerCodegen', 'GpuKMeans', 'GpuKMeansBatch',
-                          'GpuKMeansBatchSmall', 'SparkDSLR', 'SparkDSLRmod', 'SparkGPULR', 'perfDebug'}
+            'GpuKMeansBatchSmall', 'SparkDSLR', 'SparkDSLRmod', 'SparkGPULR', 'perfDebug'}
     bench_name: str = 'sparkgpu'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
 
@@ -23,16 +23,21 @@ class SparkGPUDriver(BenchDriver):
     def _find_bench_proc(self) -> Optional[psutil.Process]:
         exec_name = self._name
 
-        for process in self._async_proc_info.children(recursive=True):  # type: psutil.Process
-            if process.name() == exec_name and process.is_running():
+
+        for process in self._async_proc_info.children(recursive=True): 
+            # type: psutil.Process
+            print(process.name())
+            print(exec_name)	
+            # if process.name() == exec_name and process.is_running():
+            if (process.name() == 'java' or process.name()=='javac') and process.is_running():
                 return process
 
-        #children = self._async_proc_info.children(True)
+#        children = self._async_proc_info.children(True)
 
-        #if len(children) is 0:
-        #    return None
-        #else:
-        #    return children[0]
+#        if len(children) is 0:
+#            return None
+#        else:
+#            return children[0]
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         cmd = '{0}/bin/run-example {1}'.format(self._bench_home, self._name)
@@ -43,5 +48,5 @@ class SparkGPUDriver(BenchDriver):
         env['PATH'] = env['MAVEN_HOME'] + '/bin/:' + env['PATH']
 
         return await self._cgroup.exec_command(cmd, env=env,
-            stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL)
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL)
