@@ -21,12 +21,18 @@ class SparkGPUDriver(BenchDriver):
         return bench_name in SparkGPUDriver._benches
 
     def _find_bench_proc(self) -> Optional[psutil.Process]:
-        children = self._async_proc_info.children(True)
+        exec_name = self._name
 
-        if len(children) is 0:
-            return None
-        else:
-            return children[0]
+        for process in self._async_proc_info.children(recursive=True):  # type: psutil.Process
+            if process.name() == exec_name and process.is_running():
+                return process
+
+        #children = self._async_proc_info.children(True)
+
+        #if len(children) is 0:
+        #    return None
+        #else:
+        #    return children[0]
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         cmd = '{0}/bin/run-example {1}'.format(self._bench_home, self._name)
@@ -36,8 +42,6 @@ class SparkGPUDriver(BenchDriver):
         env['MAVEN_HOME'] = '/opt/apache-maven-3.5.4'
         env['PATH'] = env['MAVEN_HOME'] + '/bin/:' + env['PATH']
 
-        return await asyncio.create_subprocess_exec(
-            *shlex.split(cmd),
+        return await self._cgroup.exec_command(cmd, env=env,
             stdout=asyncio.subprocess.DEVNULL,
-            stderr=asyncio.subprocess.DEVNULL,
-            env=env)
+            stderr=asyncio.subprocess.DEVNULL)

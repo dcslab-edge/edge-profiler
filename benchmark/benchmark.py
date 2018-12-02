@@ -138,6 +138,12 @@ class Benchmark:
                     '-p', str(self._bench_driver.pid), '-x', ',', '-I', str(self._perf_config.interval),
                     stderr=asyncio.subprocess.PIPE)
 
+            #launching tegarastats
+#            self._tegra = await asyncio.create_subprocess_exec(
+ #               '/home/nvidia/tegrastats','--interval' ,str(self._tegra_config.interval), '--save_cfg', ''
+  #          )
+
+
             # setup for metric logger
 
             rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
@@ -206,15 +212,10 @@ class Benchmark:
             logger.info('end of monitoring loop')
 
             self._kill_perf()
+            self._kill_tegra()
 
 
 
-            #launching tegarastats
-#            self._tegra = await asyncio.create_subprocess_exec(
-#                'tegrastats','--interval' ,str(self._tegra_config.interval), '--save_cfg', ''
-#            )
-
-#            self._kill_tegra()
 
 
         except CancelledError as e:
