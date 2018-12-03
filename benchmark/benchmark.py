@@ -30,8 +30,8 @@ class Benchmark:
             def decorator(self: 'Benchmark', *args, **kwargs):
                 if not self.is_running:
                     raise RuntimeError(f'The benchmark ({self._identifier}) has already ended or never been invoked.'
-                                       ' Run benchmark first via invoking `run()`!')
-                return func(self, *args, **kwargs)
+                            ' Run benchmark first via invoking `run()`!')
+                    return func(self, *args, **kwargs)
 
             return decorator
 
@@ -60,7 +60,7 @@ class Benchmark:
     _stream_formatter = ColoredFormatter('%(asctime)s.%(msecs)03d [%(levelname)8s] %(name)14s $ %(message)s')
 
     def __init__(self, identifier: str, bench_config: BenchConfig, perf_config: PerfConfig, tegra_config: TegraConfig,
-                 rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
+            rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
         self._identifier: str = identifier
         self._perf_config: PerfConfig = perf_config
         self._tegra_config:TegraConfig = tegra_config
@@ -131,6 +131,100 @@ class Benchmark:
     async def monitor(self, print_metric_log: bool = False):
         logger = logging.getLogger(self._identifier)
 
+        @_Decorators.ensure_running        
+        async def monitor_tegra(self,print_metric_log:bool=False):
+            logger:logging.getLogger(self.identifier)
+            try:
+                #launching tegrastats
+                self._tegra = await asyncio.create_subprocess_exec(
+                        '/home/nvidia/tegrastats','--interval',str(self._tegra_config.interval),'--save_cfg',self._tegra_csv
+                        )
+
+                # setup for metric logger
+
+                rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
+                        self._bench_driver.wl_type, self._bench_driver.pid,
+                        self._tegra.pid, self._tegra_config.interval)
+                rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._tegra_config.event_names))
+
+                metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
+                metric_logger.addHandler(rabbit_mq_handler)
+
+                if print_metric_log:
+                    metric_logger.addHandler(logging.StreamHandler())
+
+                with self._tegra_csv.open('w') as fp:
+                    # print csv header
+                    #FIXME: legacy diff
+                    fp.write(','.join(self._tegra_config.event_names) + '\n')
+                    #fp.write(','.join(chain(self._perf_config.event_names,
+                    #                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))) + '\n')
+                metric_logger.addHandler(logging.FileHandler(self._tegra_csv))
+
+                # tegra polling loop
+
+                num_of_events = len(self._tegra_config.events)
+                #FIXME: legacy diff
+                #if self._perf_config.interval < 100:
+                    # remove warning message of perf from buffer
+                #    await self._perf.stderr.readline()
+
+                #prev_tsc = rdtsc.get_cycles()
+                #_, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
+                while self._bench_driver.is_running and self._tegra.returncode is None:
+                    record = []
+                    ignore_flag = False
+
+                    for _ in range(num_of_events):
+                        raw_line = await self._tegra.stderr.readline()
+                        line = raw_line.decode().strip()
+                        try:
+                            value = line.split(',')[1]
+                            float(value)
+                            record.append(value)
+                        except (IndexError, ValueError) as e:
+                            ignore_flag = True
+                            logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
+                                    f' and the line is : {line}')
+
+                            #FIXME: legacy diff
+                    #tmp = rdtsc.get_cycles()
+                    #record.append(str(tmp - prev_tsc))
+                    #prev_tsc = tmp
+
+                    #llc_occupancy, local_mem, total_mem = await self._bench_driver.read_resctrl()
+                    #record.append(str(llc_occupancy))
+
+                    #cur_local_mem = local_mem - prev_local_mem
+                    #record.append(str(cur_local_mem))
+                    #prev_local_mem = local_mem
+
+                    #record.append(str(max(total_mem - prev_total_mem - cur_local_mem, 0)))
+                    #prev_total_mem = total_mem
+
+                    if not ignore_flag:
+                        metric_logger.info(','.join(record))
+
+                logger.info('end of monitoring loop_tegra')
+
+                self._kill_tegra()
+            except CancelledError as e:
+                logger.debug(f'The task cancelled : {ex}')
+                self._stop()
+
+            finally:
+                try:
+                    self._kill_tegra()
+                    self._bench_driver.stop()
+                except (psutil.NoSuchProcess, ProcessLookupError):
+                    pass
+
+                await self._bench_driver.cleanup()
+                logger.info('The benchmark is ended.')
+                self._remove_logger_handlers()
+                self._end_time = time.time()
+
+                
         try:
             # launching perf
             self._perf = await asyncio.create_subprocess_exec(
@@ -138,17 +232,11 @@ class Benchmark:
                     '-p', str(self._bench_driver.pid), '-x', ',', '-I', str(self._perf_config.interval),
                     stderr=asyncio.subprocess.PIPE)
 
-            #launching tegarastats
-#            self._tegra = await asyncio.create_subprocess_exec(
- #               '/home/nvidia/tegrastats','--interval' ,str(self._tegra_config.interval), '--save_cfg', ''
-  #          )
-
-
             # setup for metric logger
 
             rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
-                                                self._bench_driver.wl_type, self._bench_driver.pid,
-                                                self._perf.pid, self._perf_config.interval)
+                    self._bench_driver.wl_type, self._bench_driver.pid,
+                    self._perf.pid, self._perf_config.interval)
             rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
@@ -189,9 +277,9 @@ class Benchmark:
                     except (IndexError, ValueError) as e:
                         ignore_flag = True
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
-                                     f' and the line is : {line}')
+                                f' and the line is : {line}')
 
-                #FIXME: legacy diff
+                        #FIXME: legacy diff
                 #tmp = rdtsc.get_cycles()
                 #record.append(str(tmp - prev_tsc))
                 #prev_tsc = tmp
@@ -212,11 +300,6 @@ class Benchmark:
             logger.info('end of monitoring loop')
 
             self._kill_perf()
-            self._kill_tegra()
-
-
-
-
 
         except CancelledError as e:
             logger.debug(f'The task cancelled : {ex}')
@@ -233,6 +316,8 @@ class Benchmark:
             logger.info('The benchmark is ended.')
             self._remove_logger_handlers()
             self._end_time = time.time()
+        monitor_tegra(print_metric_log)
+
 
     def _pause_bench(self):
         logging.getLogger(self._identifier).info('pausing...')
@@ -325,7 +410,7 @@ class Benchmark:
 
 class RabbitMQHandler(Handler):
     def __init__(self, rabbit_mq_config: RabbitMQConfig,
-                 bench_name: str, bench_type: str, bench_pid: int, perf_pid: int, perf_interval: int):
+            bench_name: str, bench_type: str, bench_pid: int, perf_pid: int, perf_interval: int):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -337,10 +422,10 @@ class RabbitMQHandler(Handler):
         # Notify creation of this benchmark to scheduler
         self._channel.queue_declare(queue=rabbit_mq_config.creation_q_name)
         self._channel.basic_publish(exchange='', routing_key=rabbit_mq_config.creation_q_name,
-                                    body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval}')
+                body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval}')
 
-    def emit(self, record: LogRecord):
-        formatted: str = self.format(record)
+        def emit(self, record: LogRecord):
+            formatted: str = self.format(record)
 
         self._channel.basic_publish(exchange='', routing_key=self._queue_name, body=formatted)
 
