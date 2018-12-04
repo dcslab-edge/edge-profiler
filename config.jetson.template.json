@@ -1,0 +1,29 @@
+{
+  "perf": {
+    "interval": 1000,
+    "events": [
+      "r016",
+      "r013",
+      "instructions",
+      "cycles"
+    ]
+  },
+  "tegrastats":{
+    "interval": 1000,
+    "events":[
+      "gr3d",
+      "gr3d_freq",
+      "emc",
+      "emc_freq"
+    ]
+  },
+  "rabbitMQ": {
+    "host": "localhost",
+    "queue_name": {
+      "workload_creation": "workload_creation"
+    }
+  },
+  "benchmark": {
+    "sparkgpu": "/home/nvidia/project/edge/edge-sched/GPUEnabler"
+  }
+}

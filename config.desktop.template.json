@@ -1,0 +1,20 @@
+{
+  "perf": {
+    "interval": 1000,
+    "events": [
+      "cache-references",
+      "cache-misses",
+      "instructions",
+      "cycles",
+    ]
+  },
+  "rabbitMQ": {
+    "host": "localhost",
+    "queue_name": {
+      "workload_creation": "workload_creation"
+    }
+  },
+  "benchmark": {
+    "sparkgpu": "/home/nvidia/project/edge/edge-sched/GPUEnabler"
+  }
+}

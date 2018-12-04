@@ -13,8 +13,8 @@ import psutil
 from ..utils.cgroup import Cgroup
 from ..utils.dvfs import DVFS
 from ..utils.hyphen import convert_to_hyphen, convert_to_set
-from ..utils.numa_topology import NumaTopology
-from ..utils.resctrl import ResCtrl
+# from ..utils.numa_topology import NumaTopology
+# from ..utils.resctrl import ResCtrl
 
 
 class BenchDriver(metaclass=ABCMeta):
@@ -78,7 +78,7 @@ class BenchDriver(metaclass=ABCMeta):
 
         self._group_name = identifier
         self._cgroup: Cgroup = Cgroup(identifier, 'cpuset,cpu')
-        self._resctrl_group: ResCtrl = ResCtrl()
+        #self._resctrl_group: ResCtrl = ResCtrl()
 
     def __del__(self):
         try:
@@ -165,26 +165,26 @@ class BenchDriver(metaclass=ABCMeta):
         self._async_proc = await self._launch_bench()
         self._async_proc_info = psutil.Process(self._async_proc.pid)
 
-        nodes = await NumaTopology.get_node_topo()
-
-        # Masks for cbm_mask
-        masks = [ResCtrl.MIN_MASK] * (max(nodes) + 1)
-
-        # change the cbm_ranges to cbm_ranges_list
-        if self._cbm_ranges is not None:
-            if isinstance(self._cbm_ranges, str):
-                start, end = map(int, self._cbm_ranges.split('-'))
-                mask = ResCtrl.gen_mask(start, end)
-
-                for socket_id in convert_to_set(mem_sockets):
-                    masks[socket_id] = mask
-            else:
-                for socket_id, mask_str in enumerate(self._cbm_ranges):
-                    start, end = map(int, mask_str.split('-'))
-                    masks[socket_id] = ResCtrl.gen_mask(start, end)
-        else:
-            for socket_id in convert_to_set(mem_sockets):
-                masks[socket_id] = ResCtrl.MAX_MASK
+        # nodes = await NumaTopology.get_node_topo()
+        #
+        # # Masks for cbm_mask
+        # masks = [ResCtrl.MIN_MASK] * (max(nodes) + 1)
+        #
+        # # change the cbm_ranges to cbm_ranges_list
+        # if self._cbm_ranges is not None:
+        #     if isinstance(self._cbm_ranges, str):
+        #         start, end = map(int, self._cbm_ranges.split('-'))
+        #         mask = ResCtrl.gen_mask(start, end)
+        #
+        #         #for socket_id in convert_to_set(mem_sockets):
+        #         #masks[socket_id] = mask
+        #     else:
+        #         for socket_id, mask_str in enumerate(self._cbm_ranges):
+        #             start, end = map(int, mask_str.split('-'))
+        #             masks[socket_id] = ResCtrl.gen_mask(start, end)
+        # else:
+        #     for socket_id in convert_to_set(mem_sockets):
+        #         masks[socket_id] = ResCtrl.MAX_MASK
 
         # setting freq to local config
         if self._cpu_freq is not None:
@@ -196,9 +196,9 @@ class BenchDriver(metaclass=ABCMeta):
             self._bench_proc_info = self._find_bench_proc()
             if self._bench_proc_info is not None:
                 await self._rename_group(f'{self._name}_{self._bench_proc_info.pid}')
-                await self._resctrl_group.create_group()
-                await self._resctrl_group.assign_llc(*masks)
-                await self._resctrl_group.add_tasks(self.all_child_tid())
+                # await self._resctrl_group.create_group()
+                # await self._resctrl_group.assign_llc(*masks)
+                # await self._resctrl_group.add_tasks(self.all_child_tid())
                 return
             await asyncio.sleep(0.1)
 
@@ -234,14 +234,14 @@ class BenchDriver(metaclass=ABCMeta):
             return self._numa_mem_nodes
 
         # Local Alloc Case
-        cpu_topo, mem_topo = await NumaTopology.get_numa_info()
+        #cpu_topo, mem_topo = await NumaTopology.get_numa_info()
         bound_cores = convert_to_set(self._binding_cores)
 
         belonged_sockets: List[int] = list()
 
-        for socket_id, core_ids in cpu_topo.items():
-            if len(core_ids & bound_cores) is not 0:
-                belonged_sockets.append(socket_id)
+        #for socket_id, core_ids in cpu_topo.items():
+        #   if len(core_ids & bound_cores) is not 0:
+        #        belonged_sockets.append(socket_id)
 
         return convert_to_hyphen(belonged_sockets)
 
@@ -250,24 +250,26 @@ class BenchDriver(metaclass=ABCMeta):
         self._group_name = new_name
 
         await self._cgroup.rename(new_name)
-        self._resctrl_group.group_name = self._group_name
+        # self._resctrl_group.group_name = self._group_name
 
     async def cleanup(self) -> None:
         await self._cgroup.delete()
-        await self._resctrl_group.delete()
+        # await self._resctrl_group.delete()
 
-    def read_resctrl(self) -> Coroutine[None, None, Tuple[int, int, int]]:
-        return self._resctrl_group.read()
+    # def read_resctrl(self) -> Coroutine[None, None, Tuple[int, int, int]]:
+        # return self._resctrl_group.read()
 
 
 def find_driver(workload_name) -> Type[BenchDriver]:
-    from benchmark.driver.spec_driver import SpecDriver
-    from benchmark.driver.parsec_driver import ParsecDriver
-    from benchmark.driver.rodinia_driver import RodiniaDriver
-    from benchmark.driver.npb_driver import NPBDriver
+    # from benchmark.driver.spec_driver import SpecDriver
+    # from benchmark.driver.parsec_driver import ParsecDriver
+    # from benchmark.driver.rodinia_driver import RodiniaDriver
+    # from benchmark.driver.npb_driver import NPBDriver
+    from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 
-    bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
-
+    # bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
+    bench_drivers = (SparkGPUDriver,)
+    print(bench_drivers)
     for driver in bench_drivers:
         if driver.has(workload_name):
             return driver
@@ -279,6 +281,7 @@ def bench_driver(workload_name: str, workload_type: str, identifier: str, bindin
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
                  cbm_ranges: Union[str, List[str]] = None) \
         -> BenchDriver:
+    print("WORKLOAD:"+workload_name)
     _bench_driver = find_driver(workload_name)
 
     return _bench_driver(workload_name, workload_type, identifier, binding_cores, num_threads, numa_mem_nodes,
