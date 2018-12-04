@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # coding: UTF-8
 
 import asyncio
@@ -31,7 +32,7 @@ class Benchmark:
                 if not self.is_running:
                     raise RuntimeError(f'The benchmark ({self._identifier}) has already ended or never been invoked.'
                             ' Run benchmark first via invoking `run()`!')
-                    return func(self, *args, **kwargs)
+                return func(self, *args, **kwargs)
 
             return decorator
 
@@ -129,101 +130,8 @@ class Benchmark:
 
     @_Decorators.ensure_running
     async def monitor(self, print_metric_log: bool = False):
+        print("monitorred")
         logger = logging.getLogger(self._identifier)
-
-        @_Decorators.ensure_running        
-        async def monitor_tegra(self,print_metric_log:bool=False):
-            logger:logging.getLogger(self.identifier)
-            try:
-                #launching tegrastats
-                self._tegra = await asyncio.create_subprocess_exec(
-                        '/home/nvidia/tegrastats','--interval',str(self._tegra_config.interval),'--save_cfg',self._tegra_csv
-                        )
-
-                # setup for metric logger
-
-                rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
-                        self._bench_driver.wl_type, self._bench_driver.pid,
-                        self._tegra.pid, self._tegra_config.interval)
-                rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._tegra_config.event_names))
-
-                metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
-                metric_logger.addHandler(rabbit_mq_handler)
-
-                if print_metric_log:
-                    metric_logger.addHandler(logging.StreamHandler())
-
-                with self._tegra_csv.open('w') as fp:
-                    # print csv header
-                    #FIXME: legacy diff
-                    fp.write(','.join(self._tegra_config.event_names) + '\n')
-                    #fp.write(','.join(chain(self._perf_config.event_names,
-                    #                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))) + '\n')
-                metric_logger.addHandler(logging.FileHandler(self._tegra_csv))
-
-                # tegra polling loop
-
-                num_of_events = len(self._tegra_config.events)
-                #FIXME: legacy diff
-                #if self._perf_config.interval < 100:
-                    # remove warning message of perf from buffer
-                #    await self._perf.stderr.readline()
-
-                #prev_tsc = rdtsc.get_cycles()
-                #_, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
-                while self._bench_driver.is_running and self._tegra.returncode is None:
-                    record = []
-                    ignore_flag = False
-
-                    for _ in range(num_of_events):
-                        raw_line = await self._tegra.stderr.readline()
-                        line = raw_line.decode().strip()
-                        try:
-                            value = line.split(',')[1]
-                            float(value)
-                            record.append(value)
-                        except (IndexError, ValueError) as e:
-                            ignore_flag = True
-                            logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
-                                    f' and the line is : {line}')
-
-                            #FIXME: legacy diff
-                    #tmp = rdtsc.get_cycles()
-                    #record.append(str(tmp - prev_tsc))
-                    #prev_tsc = tmp
-
-                    #llc_occupancy, local_mem, total_mem = await self._bench_driver.read_resctrl()
-                    #record.append(str(llc_occupancy))
-
-                    #cur_local_mem = local_mem - prev_local_mem
-                    #record.append(str(cur_local_mem))
-                    #prev_local_mem = local_mem
-
-                    #record.append(str(max(total_mem - prev_total_mem - cur_local_mem, 0)))
-                    #prev_total_mem = total_mem
-
-                    if not ignore_flag:
-                        metric_logger.info(','.join(record))
-
-                logger.info('end of monitoring loop_tegra')
-
-                self._kill_tegra()
-            except CancelledError as e:
-                logger.debug(f'The task cancelled : {ex}')
-                self._stop()
-
-            finally:
-                try:
-                    self._kill_tegra()
-                    self._bench_driver.stop()
-                except (psutil.NoSuchProcess, ProcessLookupError):
-                    pass
-
-                await self._bench_driver.cleanup()
-                logger.info('The benchmark is ended.')
-                self._remove_logger_handlers()
-                self._end_time = time.time()
-
                 
         try:
             # launching perf
@@ -232,11 +140,16 @@ class Benchmark:
                     '-p', str(self._bench_driver.pid), '-x', ',', '-I', str(self._perf_config.interval),
                     stderr=asyncio.subprocess.PIPE)
 
+            # launching tegrastats
+            self._tegra = await asyncio.create_subprocess_exec(
+                'sudo', '/home/nvidia/tegrastats', '--interval', str(self._tegra_config.interval),
+                stdout=asyncio.subprocess.PIPE)
+
             # setup for metric logger
 
             rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                     self._bench_driver.wl_type, self._bench_driver.pid,
-                    self._perf.pid, self._perf_config.interval)
+                    self._perf.pid, self._perf_config.interval, self._tegra.pid,self._tegra_config.interval)
             rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
@@ -248,9 +161,12 @@ class Benchmark:
             with self._perf_csv.open('w') as fp:
                 # print csv header
                 #FIXME: legacy diff
-                fp.write(','.join(self._perf_config.event_names) + '\n')
+                fp.write(','.join(self._perf_config.event_names))
                 #fp.write(','.join(chain(self._perf_config.event_names,
                 #                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))) + '\n')
+                #fp.write(',tegra_gpu,tegra_emc'+'\n')
+                fp.write(',tegra_total_line'+'\n')
+
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
             # perf polling loop
@@ -274,12 +190,18 @@ class Benchmark:
                         value = line.split(',')[1]
                         float(value)
                         record.append(value)
+                        print(record)
                     except (IndexError, ValueError) as e:
                         ignore_flag = True
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
                                 f' and the line is : {line}')
+                # tegra data append
+                raw_tegra_line = await self._tegra.stdout.readline()
+                for rec in self.tegra_parser(raw_tegra_line):
+                    record.append(rec)
+                    print(record)
+                #record.append(self.tegra_parser(raw_tegra_line))
 
-                        #FIXME: legacy diff
                 #tmp = rdtsc.get_cycles()
                 #record.append(str(tmp - prev_tsc))
                 #prev_tsc = tmp
@@ -316,7 +238,21 @@ class Benchmark:
             logger.info('The benchmark is ended.')
             self._remove_logger_handlers()
             self._end_time = time.time()
-        monitor_tegra(print_metric_log)
+
+
+    def tegra_parser(self,line):
+        #['RAM', '2235/7854MB', '(lfb', '208x4MB)', 'CPU', '[9%@2035,off,off,7%@2034,95%@2033,10%@2034]', 'EMC_FREQ', '2%@1600', 'GR3D_FREQ', '0%@140', 'APE', '150', 'BCPU@39.5C', 'MCPU@39.5C', 'GPU@37.5C', 'PLL@39.5C', 'Tboard@34C', 'Tdiode@35.75C', 'PMIC@100C', 'thermal@39C', 'VDD_IN', '3791/4276', 'VDD_CPU', '1082/1546', 'VDD_GPU', '154/154', 'VDD_SOC', '619/616', 'VDD_WIFI', '0/0', 'VDD_DDR', '887/917']
+
+        ret =[]
+        tegra_lists = line.decode().strip().split(' ');
+        emc_freq = tegra_lists[7]
+        gr3d_freq = tegra_lists[9]
+        def freq_parser(line):
+            val=line.split('@')[0]
+            return val[:-1]
+        return [freq_parser(gr3d_freq),freq_parser(emc_freq)]
+
+
 
 
     def _pause_bench(self):
@@ -410,7 +346,7 @@ class Benchmark:
 
 class RabbitMQHandler(Handler):
     def __init__(self, rabbit_mq_config: RabbitMQConfig,
-            bench_name: str, bench_type: str, bench_pid: int, perf_pid: int, perf_interval: int):
+            bench_name: str, bench_type: str, bench_pid: int, perf_pid: int, perf_interval: int,tegra_pid: int,tegra_interval: int):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -422,10 +358,10 @@ class RabbitMQHandler(Handler):
         # Notify creation of this benchmark to scheduler
         self._channel.queue_declare(queue=rabbit_mq_config.creation_q_name)
         self._channel.basic_publish(exchange='', routing_key=rabbit_mq_config.creation_q_name,
-                body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval}')
+                body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval}')
 
-        def emit(self, record: LogRecord):
-            formatted: str = self.format(record)
+    def emit(self, record: LogRecord):
+        formatted: str = self.format(record)
 
         self._channel.basic_publish(exchange='', routing_key=self._queue_name, body=formatted)
 
