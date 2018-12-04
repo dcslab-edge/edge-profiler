@@ -2,12 +2,10 @@
   "perf": {
     "interval": 1000,
     "events": [
-      "r017",
       "r016",
       "r013",
       "instructions",
-      "cycles",
-      "r004"
+      "cycles"
     ]
   },
   "tegrastats":{
