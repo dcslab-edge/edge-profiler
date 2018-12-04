@@ -2,9 +2,13 @@
 
 from typing import Any, Generator, Optional, Tuple
 
-#TegraEvent is implemented, but is not used.
-#No such case for tegra event exists(cause it gives all metric at once
+
 class TegraEvent:
+    """
+    # TegraEvent is implemented, but is not used.
+    # No such case for tegra event exists(cause it gives all metric at once)
+
+    """
     def __init__(self, event: str, alias: Optional[str] = None):
         self._event: str = event
         self._alias: str = alias if alias is not None else event
@@ -18,8 +22,10 @@ class TegraEvent:
         return self._alias
 
 
-#contains interval value, events(not used)
 class TegraConfig:
+    """
+    # contains interval value, events(not used)
+    """
     def __init__(self, interval: int, events: Tuple[TegraEvent, ...]):
         self._interval: int = interval
         self._events: Tuple[TegraEvent, ...] = events

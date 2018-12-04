@@ -31,7 +31,7 @@ class Benchmark:
             def decorator(self: 'Benchmark', *args, **kwargs):
                 if not self.is_running:
                     raise RuntimeError(f'The benchmark ({self._identifier}) has already ended or never been invoked.'
-                            ' Run benchmark first via invoking `run()`!')
+                                       ' Run benchmark first via invoking `run()`!')
                 return func(self, *args, **kwargs)
 
             return decorator
@@ -61,7 +61,7 @@ class Benchmark:
     _stream_formatter = ColoredFormatter('%(asctime)s.%(msecs)03d [%(levelname)8s] %(name)14s $ %(message)s')
 
     def __init__(self, identifier: str, bench_config: BenchConfig, perf_config: PerfConfig, tegra_config: TegraConfig,
-            rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
+                 rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
         self._identifier: str = identifier
         self._perf_config: PerfConfig = perf_config
         self._tegra_config:TegraConfig = tegra_config
@@ -76,14 +76,8 @@ class Benchmark:
         if not perf_parent.exists():
             perf_parent.mkdir()
 
+        # perf_csv contains both info of `perf` and `tegrastats`
         self._perf_csv: Path = perf_parent / f'{identifier}.csv'
-
-        tegra_parent = workspace / 'tegrastats'
-        if not tegra_parent.exists():
-            tegra_parent.mkdir()
-
-        self._tegra_csv: Path = tegra_parent / f'{identifier}.csv'
-
 
         log_parent = workspace / 'logs'
         if not log_parent.exists():
@@ -116,10 +110,6 @@ class Benchmark:
             stream_handler.setFormatter(Benchmark._stream_formatter)
             logger.addHandler(stream_handler)
 
-        # retrieve host numa info
-        #FIXME: legacy diff
-        #self._bench_driver._host_numa_info = await NumaTopology.get_numa_info()
-
         # launching benchmark
 
         logger.info('Starting benchmark...')
@@ -141,7 +131,7 @@ class Benchmark:
                     stderr=asyncio.subprocess.PIPE)
 
             # launching tegrastats
-            #tegrastats uses stdout for printing
+            # tegrastats uses stdout for printing
             self._tegra = await asyncio.create_subprocess_exec(
                 'sudo', '/home/nvidia/tegrastats', '--interval', str(self._tegra_config.interval),
                 stdout=asyncio.subprocess.PIPE)
@@ -150,9 +140,11 @@ class Benchmark:
             # rabiit_mq is used to read perf values
             # tegra-config files are added just in case but not used
             rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
-                    self._bench_driver.wl_type, self._bench_driver.pid,
-                    self._perf.pid, self._perf_config.interval, self._tegra.pid,self._tegra_config.interval)
-            rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,self._tegra_config.event_names))
+                                                self._bench_driver.wl_type, self._bench_driver.pid,
+                                                self._perf.pid, self._perf_config.interval,
+                                                self._tegra.pid, self._tegra_config.interval)
+            rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,
+                                                             self._tegra_config.event_names))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
             metric_logger.addHandler(rabbit_mq_handler)
@@ -163,10 +155,6 @@ class Benchmark:
             with self._perf_csv.open('w') as fp:
                 # print csv header
                 fp.write(','.join(self._perf_config.event_names))
-                #fp.write(','.join(chain(self._perf_config.event_names,
-                #                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))) + '\n')
-                #fp.write(',tegra_gpu,tegra_emc'+'\n')
-                #tegrastats headers
                 fp.write(',gr3d,gr3d_freq,emc,emc_freq'+'\n')
 
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
@@ -174,13 +162,6 @@ class Benchmark:
             # perf polling loop
 
             num_of_events = len(self._perf_config.events)
-            #FIXME: legacy diff
-            #if self._perf_config.interval < 100:
-                # remove warning message of perf from buffer
-            #    await self._perf.stderr.readline()
-
-            #prev_tsc = rdtsc.get_cycles()
-            #_, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
             while self._bench_driver.is_running and self._perf.returncode is None:
                 record = []
                 ignore_flag = False
@@ -195,8 +176,8 @@ class Benchmark:
                     except (IndexError, ValueError) as e:
                         ignore_flag = True
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
-                                f' and the line is : {line}')
-                # tegra data append(gr3d,gr3dfreq,emc,emcfreq)
+                                     f' and the line is : {line}')
+                # tegra data append(gr3d, gr3dfreq, emc, emcfreq)
                 raw_tegra_line = await self._tegra.stdout.readline()
                 for rec in self.tegra_parser(raw_tegra_line):
                     record.append(rec)
@@ -226,21 +207,23 @@ class Benchmark:
             self._remove_logger_handlers()
             self._end_time = time.time()
 
-    #parses tegrastats line information for GR3D & EMC with freq
-    def tegra_parser(self,tegrastatline):
-        #['RAM', '2235/7854MB', '(lfb', '208x4MB)', 'CPU', '[9%@2035,off,off,7%@2034,95%@2033,10%@2034]', 'EMC_FREQ', '2%@1600', 'GR3D_FREQ', '0%@140', 'APE', '150', 'BCPU@39.5C', 'MCPU@39.5C', 'GPU@37.5C', 'PLL@39.5C', 'Tboard@34C', 'Tdiode@35.75C', 'PMIC@100C', 'thermal@39C', 'VDD_IN', '3791/4276', 'VDD_CPU', '1082/1546', 'VDD_GPU', '154/154', 'VDD_SOC', '619/616', 'VDD_WIFI', '0/0', 'VDD_DDR', '887/917']
+    @staticmethod
+    def tegra_parser(tegrastatline):
+        """
+        parses tegrastats line information for GR3D & EMC with freq
+        :param tegrastatline:
+        :return:
+        """
         _tegra_lists = tegrastatline.decode().strip().split(' ')
+
         def freq_parser(_utilfreq):
             val=_utilfreq.split('@')[0]
-            return [val[:-1],_utilfreq.split('@')[1]]
-        #[%,freq]
+            return [val[:-1], _utilfreq.split('@')[1]]
+        # [%,freq]
         emc_freq = freq_parser(_tegra_lists[7])
         gr3d_freq = freq_parser(_tegra_lists[9])
 
-        return [gr3d_freq[0],gr3d_freq[1],emc_freq[0],emc_freq[1]]
-
-
-
+        return [gr3d_freq[0], gr3d_freq[1], emc_freq[0], emc_freq[1]]
 
     def _pause_bench(self):
         logging.getLogger(self._identifier).info('pausing...')
@@ -272,7 +255,7 @@ class Benchmark:
     # Tegrastats
     def _kill_tegra(self):
         if self._tegra is not None and self._tegra.returncode is None:
-            #tegra runs on sudo command...
+            # tegra runs on sudo command...
             os.system("sudo kill %d"%(self._tegra.pid))
 
 #            self._tegra.kill()
@@ -335,8 +318,8 @@ class Benchmark:
 
 
 class RabbitMQHandler(Handler):
-    def __init__(self, rabbit_mq_config: RabbitMQConfig,
-            bench_name: str, bench_type: str, bench_pid: int, perf_pid: int, perf_interval: int,tegra_pid: int,tegra_interval: int):
+    def __init__(self, rabbit_mq_config: RabbitMQConfig, bench_name: str, bench_type: str, bench_pid: int,
+                 perf_pid: int, perf_interval: int, tegra_pid: int, tegra_interval: int):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -369,7 +352,7 @@ class RabbitMQHandler(Handler):
 
 
 class RabbitMQFormatter(Formatter):
-    def __init__(self, perf_events: Generator[str, Any, None],tegra_events: Generator[str, Any, None]):
+    def __init__(self, perf_events: Generator[str, Any, None], tegra_events: Generator[str, Any, None]):
         super().__init__()
         self._event_names = tuple(perf_events) + tuple(tegra_events)
         print(self._event_names)

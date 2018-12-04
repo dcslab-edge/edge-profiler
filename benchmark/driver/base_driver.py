@@ -13,8 +13,8 @@ import psutil
 from ..utils.cgroup import Cgroup
 from ..utils.dvfs import DVFS
 from ..utils.hyphen import convert_to_hyphen, convert_to_set
-#from ..utils.numa_topology import NumaTopology
-#from ..utils.resctrl import ResCtrl
+# from ..utils.numa_topology import NumaTopology
+# from ..utils.resctrl import ResCtrl
 
 
 class BenchDriver(metaclass=ABCMeta):
@@ -267,7 +267,7 @@ def find_driver(workload_name) -> Type[BenchDriver]:
     # from benchmark.driver.npb_driver import NPBDriver
     from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 
-    #bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
+    # bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
     bench_drivers = (SparkGPUDriver,)
     print(bench_drivers)
     for driver in bench_drivers:
