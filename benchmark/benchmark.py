@@ -5,8 +5,8 @@ import asyncio
 import functools
 import json
 import logging
-import time
 import os
+import time
 from concurrent.futures import CancelledError
 from itertools import chain
 from logging import Formatter, Handler, LogRecord
@@ -20,10 +20,7 @@ from coloredlogs import ColoredFormatter
 from pika.adapters.blocking_connection import BlockingChannel
 
 from benchmark.driver.base_driver import BenchDriver
-#Add tegraconfig
-
-from containers import BenchConfig, PerfConfig, RabbitMQConfig,TegraConfig
-from .utils.numa_topology import NumaTopology
+from containers import BenchConfig, PerfConfig, RabbitMQConfig, TegraConfig
 
 
 class Benchmark:
@@ -155,7 +152,7 @@ class Benchmark:
             rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                     self._bench_driver.wl_type, self._bench_driver.pid,
                     self._perf.pid, self._perf_config.interval, self._tegra.pid,self._tegra_config.interval)
-            rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names))
+            rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,self._tegra_config.event_names))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
             metric_logger.addHandler(rabbit_mq_handler)
@@ -213,7 +210,7 @@ class Benchmark:
             self._kill_tegra()
 
         except CancelledError as e:
-            logger.debug(f'The task cancelled : {ex}')
+            logger.debug(f'The task cancelled : {e}')
             self._stop()
 
         finally:
@@ -230,17 +227,15 @@ class Benchmark:
             self._end_time = time.time()
 
     #parses tegrastats line information for GR3D & EMC with freq
-    def tegra_parser(self,line):
+    def tegra_parser(self,tegrastatline):
         #['RAM', '2235/7854MB', '(lfb', '208x4MB)', 'CPU', '[9%@2035,off,off,7%@2034,95%@2033,10%@2034]', 'EMC_FREQ', '2%@1600', 'GR3D_FREQ', '0%@140', 'APE', '150', 'BCPU@39.5C', 'MCPU@39.5C', 'GPU@37.5C', 'PLL@39.5C', 'Tboard@34C', 'Tdiode@35.75C', 'PMIC@100C', 'thermal@39C', 'VDD_IN', '3791/4276', 'VDD_CPU', '1082/1546', 'VDD_GPU', '154/154', 'VDD_SOC', '619/616', 'VDD_WIFI', '0/0', 'VDD_DDR', '887/917']
-
-        ret =[]
-        tegra_lists = line.decode().strip().split(' ');
-        def freq_parser(line):
-            val=line.split('@')[0]
-            return [val[:-1],line.split('@')[1]]
+        _tegra_lists = tegrastatline.decode().strip().split(' ')
+        def freq_parser(_utilfreq):
+            val=_utilfreq.split('@')[0]
+            return [val[:-1],_utilfreq.split('@')[1]]
         #[%,freq]
-        emc_freq = freq_parser(tegra_lists[7])
-        gr3d_freq = freq_parser(tegra_lists[9])
+        emc_freq = freq_parser(_tegra_lists[7])
+        gr3d_freq = freq_parser(_tegra_lists[9])
 
         return [gr3d_freq[0],gr3d_freq[1],emc_freq[0],emc_freq[1]]
 
@@ -374,9 +369,10 @@ class RabbitMQHandler(Handler):
 
 
 class RabbitMQFormatter(Formatter):
-    def __init__(self, events: Generator[str, Any, None]):
+    def __init__(self, perf_events: Generator[str, Any, None],tegra_events: Generator[str, Any, None]):
         super().__init__()
-        self._event_names = tuple(events) + ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem', 'req_num')
+        self._event_names = tuple(perf_events) + tuple(tegra_events)
+        print(self._event_names)
         self._req_num = 0
 
     @staticmethod
@@ -392,6 +388,7 @@ class RabbitMQFormatter(Formatter):
             raise ValueError(f'{val} is neither an int nor a float.')
 
     def format(self, record: LogRecord) -> str:
+        print(record.msg)
         values = chain(map(self._convert_num, record.msg.split(',')), (self._req_num,))
         self._req_num += 1
         return json.dumps({k: v for k, v in zip(self._event_names, values)})
