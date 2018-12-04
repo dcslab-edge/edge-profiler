@@ -21,6 +21,7 @@ from pika.adapters.blocking_connection import BlockingChannel
 
 from benchmark.driver.base_driver import BenchDriver
 from containers import BenchConfig, PerfConfig, RabbitMQConfig, TegraConfig
+from .utils.machine_type import MachineChecker, NodeType
 
 
 class Benchmark:
@@ -64,13 +65,14 @@ class Benchmark:
                  rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
         self._identifier: str = identifier
         self._perf_config: PerfConfig = perf_config
-        self._tegra_config:TegraConfig = tegra_config
+        self._tegra_config: TegraConfig = tegra_config
         self._rabbit_mq_config: RabbitMQConfig = rabbit_mq_config
 
         self._bench_driver: BenchDriver = bench_config.generate_driver(identifier)
         self._perf: Optional[asyncio.subprocess.Process] = None
         self._tegra: Optional[asyncio.subprocess.Process] = None
         self._end_time: Optional[float] = None
+        self._node_type = MachineChecker.get_node_type()
 
         perf_parent = workspace / 'perf'
         if not perf_parent.exists():
@@ -120,7 +122,6 @@ class Benchmark:
 
     @_Decorators.ensure_running
     async def monitor(self, print_metric_log: bool = False):
-        print("monitorred")
         logger = logging.getLogger(self._identifier)
                 
         try:
@@ -132,19 +133,27 @@ class Benchmark:
 
             # launching tegrastats
             # tegrastats uses stdout for printing
-            self._tegra = await asyncio.create_subprocess_exec(
-                'sudo', '/home/nvidia/tegrastats', '--interval', str(self._tegra_config.interval),
-                stdout=asyncio.subprocess.PIPE)
+            if self._node_type == NodeType.IntegratedGPU:
+                self._tegra = await asyncio.create_subprocess_exec(
+                    'sudo', '/home/nvidia/tegrastats', '--interval', str(self._tegra_config.interval),
+                    stdout=asyncio.subprocess.PIPE)
 
             # setup for metric logger
             # rabiit_mq is used to read perf values
             # tegra-config files are added just in case but not used
-            rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
-                                                self._bench_driver.wl_type, self._bench_driver.pid,
-                                                self._perf.pid, self._perf_config.interval,
-                                                self._tegra.pid, self._tegra_config.interval)
-            rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,
-                                                             self._tegra_config.event_names))
+            if self._node_type == NodeType.IntegratedGPU:
+                rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
+                                                    self._bench_driver.wl_type, self._bench_driver.pid,
+                                                    self._perf.pid, self._perf_config.interval,
+                                                    self._tegra.pid, self._tegra_config.interval)
+                rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,
+                                                                 self._tegra_config.event_names))
+
+            elif self._node_type == NodeType.CPU:
+                rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
+                                                    self._bench_driver.wl_type, self._bench_driver.pid,
+                                                    self._perf.pid, self._perf_config.interval, None, None)
+                rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names, None))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
             metric_logger.addHandler(rabbit_mq_handler)
@@ -155,7 +164,8 @@ class Benchmark:
             with self._perf_csv.open('w') as fp:
                 # print csv header
                 fp.write(','.join(self._perf_config.event_names))
-                fp.write(',gr3d,gr3d_freq,emc,emc_freq'+'\n')
+                if self._node_type == NodeType.IntegratedGPU:
+                    fp.write(',gr3d,gr3d_freq,emc,emc_freq'+'\n')
 
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
@@ -177,10 +187,11 @@ class Benchmark:
                         ignore_flag = True
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
                                      f' and the line is : {line}')
-                # tegra data append(gr3d, gr3dfreq, emc, emcfreq)
-                raw_tegra_line = await self._tegra.stdout.readline()
-                for rec in self.tegra_parser(raw_tegra_line):
-                    record.append(rec)
+                if self._node_type == NodeType.IntegratedGPU:
+                    # tegra data append(gr3d, gr3dfreq, emc, emcfreq)
+                    raw_tegra_line = await self._tegra.stdout.readline()
+                    for rec in self.tegra_parser(raw_tegra_line):
+                        record.append(rec)
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
@@ -188,7 +199,8 @@ class Benchmark:
             logger.info('end of monitoring loop')
 
             self._kill_perf()
-            self._kill_tegra()
+            if self._node_type == NodeType.IntegratedGPU:
+                self._kill_tegra()
 
         except CancelledError as e:
             logger.debug(f'The task cancelled : {e}')
@@ -197,7 +209,8 @@ class Benchmark:
         finally:
             try:
                 self._kill_perf()
-                self._kill_tegra()
+                if self._node_type == NodeType.IntegratedGPU:
+                    self._kill_tegra()
                 self._bench_driver.stop()
             except (psutil.NoSuchProcess, ProcessLookupError):
                 pass
@@ -234,7 +247,8 @@ class Benchmark:
         self._pause_bench()
         self._perf.send_signal(SIGSTOP)
         # Tegrastats
-        self._tegra.send_signal(SIGSTOP)
+        if self._node_type == NodeType.IntegratedGPU:
+            self._tegra.send_signal(SIGSTOP)
 
     @_Decorators.ensure_running
     def resume(self):
@@ -244,8 +258,9 @@ class Benchmark:
         if self._perf is not None and self._perf.returncode is None:
             self._perf.send_signal(SIGCONT)
         # Tegrastats
-        if self._tegra is not None and self._tegra.returncode is None:
-            self._tegra.send_signal(SIGCONT)
+        if self._node_type == NodeType.IntegratedGPU:
+            if self._tegra is not None and self._tegra.returncode is None:
+                self._tegra.send_signal(SIGCONT)
 
     def _kill_perf(self):
         if self._perf is not None and self._perf.returncode is None:
@@ -319,7 +334,7 @@ class Benchmark:
 
 class RabbitMQHandler(Handler):
     def __init__(self, rabbit_mq_config: RabbitMQConfig, bench_name: str, bench_type: str, bench_pid: int,
-                 perf_pid: int, perf_interval: int, tegra_pid: int, tegra_interval: int):
+                 perf_pid: int, perf_interval: int, tegra_pid: Optional[int], tegra_interval: Optional[int]):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -352,9 +367,11 @@ class RabbitMQHandler(Handler):
 
 
 class RabbitMQFormatter(Formatter):
-    def __init__(self, perf_events: Generator[str, Any, None], tegra_events: Generator[str, Any, None]):
+    def __init__(self, perf_events: Generator[str, Any, None], tegra_events: Optional[Generator[str, Any, None]]):
         super().__init__()
-        self._event_names = tuple(perf_events) + tuple(tegra_events)
+        self._event_names = tuple(perf_events)
+        if tegra_events is not None:
+            self._event_names += tuple(tegra_events)
         print(self._event_names)
         self._req_num = 0
 
