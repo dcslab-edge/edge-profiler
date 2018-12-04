@@ -29,6 +29,7 @@ class SparkGPUDriver(BenchDriver):
             print(process.name())
             print(exec_name)	
             # if process.name() == exec_name and process.is_running():
+            # spark process run programs on 'java', so get java calls
             if (process.name() == 'java' or process.name()=='javac') and process.is_running():
                 return process
 

@@ -6,6 +6,7 @@ import functools
 import json
 import logging
 import time
+import os
 from concurrent.futures import CancelledError
 from itertools import chain
 from logging import Formatter, Handler, LogRecord
@@ -19,6 +20,8 @@ from coloredlogs import ColoredFormatter
 from pika.adapters.blocking_connection import BlockingChannel
 
 from benchmark.driver.base_driver import BenchDriver
+#Add tegraconfig
+
 from containers import BenchConfig, PerfConfig, RabbitMQConfig,TegraConfig
 from .utils.numa_topology import NumaTopology
 
@@ -141,12 +144,14 @@ class Benchmark:
                     stderr=asyncio.subprocess.PIPE)
 
             # launching tegrastats
+            #tegrastats uses stdout for printing
             self._tegra = await asyncio.create_subprocess_exec(
                 'sudo', '/home/nvidia/tegrastats', '--interval', str(self._tegra_config.interval),
                 stdout=asyncio.subprocess.PIPE)
 
             # setup for metric logger
-
+            # rabiit_mq is used to read perf values
+            # tegra-config files are added just in case but not used
             rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                     self._bench_driver.wl_type, self._bench_driver.pid,
                     self._perf.pid, self._perf_config.interval, self._tegra.pid,self._tegra_config.interval)
@@ -160,12 +165,12 @@ class Benchmark:
 
             with self._perf_csv.open('w') as fp:
                 # print csv header
-                #FIXME: legacy diff
                 fp.write(','.join(self._perf_config.event_names))
                 #fp.write(','.join(chain(self._perf_config.event_names,
                 #                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))) + '\n')
                 #fp.write(',tegra_gpu,tegra_emc'+'\n')
-                fp.write(',tegra_total_line'+'\n')
+                #tegrastats headers
+                fp.write(',gr3d,gr3d_freq,emc,emc_freq'+'\n')
 
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
@@ -190,31 +195,14 @@ class Benchmark:
                         value = line.split(',')[1]
                         float(value)
                         record.append(value)
-                        print(record)
                     except (IndexError, ValueError) as e:
                         ignore_flag = True
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
                                 f' and the line is : {line}')
-                # tegra data append
+                # tegra data append(gr3d,gr3dfreq,emc,emcfreq)
                 raw_tegra_line = await self._tegra.stdout.readline()
                 for rec in self.tegra_parser(raw_tegra_line):
                     record.append(rec)
-                    print(record)
-                #record.append(self.tegra_parser(raw_tegra_line))
-
-                #tmp = rdtsc.get_cycles()
-                #record.append(str(tmp - prev_tsc))
-                #prev_tsc = tmp
-
-                #llc_occupancy, local_mem, total_mem = await self._bench_driver.read_resctrl()
-                #record.append(str(llc_occupancy))
-
-                #cur_local_mem = local_mem - prev_local_mem
-                #record.append(str(cur_local_mem))
-                #prev_local_mem = local_mem
-
-                #record.append(str(max(total_mem - prev_total_mem - cur_local_mem, 0)))
-                #prev_total_mem = total_mem
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
@@ -222,6 +210,7 @@ class Benchmark:
             logger.info('end of monitoring loop')
 
             self._kill_perf()
+            self._kill_tegra()
 
         except CancelledError as e:
             logger.debug(f'The task cancelled : {ex}')
@@ -230,6 +219,7 @@ class Benchmark:
         finally:
             try:
                 self._kill_perf()
+                self._kill_tegra()
                 self._bench_driver.stop()
             except (psutil.NoSuchProcess, ProcessLookupError):
                 pass
@@ -239,18 +229,20 @@ class Benchmark:
             self._remove_logger_handlers()
             self._end_time = time.time()
 
-
+    #parses tegrastats line information for GR3D & EMC with freq
     def tegra_parser(self,line):
         #['RAM', '2235/7854MB', '(lfb', '208x4MB)', 'CPU', '[9%@2035,off,off,7%@2034,95%@2033,10%@2034]', 'EMC_FREQ', '2%@1600', 'GR3D_FREQ', '0%@140', 'APE', '150', 'BCPU@39.5C', 'MCPU@39.5C', 'GPU@37.5C', 'PLL@39.5C', 'Tboard@34C', 'Tdiode@35.75C', 'PMIC@100C', 'thermal@39C', 'VDD_IN', '3791/4276', 'VDD_CPU', '1082/1546', 'VDD_GPU', '154/154', 'VDD_SOC', '619/616', 'VDD_WIFI', '0/0', 'VDD_DDR', '887/917']
 
         ret =[]
         tegra_lists = line.decode().strip().split(' ');
-        emc_freq = tegra_lists[7]
-        gr3d_freq = tegra_lists[9]
         def freq_parser(line):
             val=line.split('@')[0]
-            return val[:-1]
-        return [freq_parser(gr3d_freq),freq_parser(emc_freq)]
+            return [val[:-1],line.split('@')[1]]
+        #[%,freq]
+        emc_freq = freq_parser(tegra_lists[7])
+        gr3d_freq = freq_parser(tegra_lists[9])
+
+        return [gr3d_freq[0],gr3d_freq[1],emc_freq[0],emc_freq[1]]
 
 
 
@@ -285,7 +277,10 @@ class Benchmark:
     # Tegrastats
     def _kill_tegra(self):
         if self._tegra is not None and self._tegra.returncode is None:
-            self._tegra.kill()
+            #tegra runs on sudo command...
+            os.system("sudo kill %d"%(self._tegra.pid))
+
+#            self._tegra.kill()
         self._tegra = None
 
     def _stop(self):
