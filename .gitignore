@@ -265,3 +265,4 @@ Temporary Items
 config.json
 experiments
 local_config
+*.iml
