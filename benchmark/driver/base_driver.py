@@ -195,8 +195,6 @@ class BenchDriver(metaclass=ABCMeta):
         while True:
             self._bench_proc_info = self._find_bench_proc()
             if self._bench_proc_info is not None:
-                print(self._bench_proc_info.name())
-                print(self._name)
                 await self._rename_group(f'{self._name}_{self._bench_proc_info.pid}')
                 # await self._resctrl_group.create_group()
                 # await self._resctrl_group.assign_llc(*masks)
