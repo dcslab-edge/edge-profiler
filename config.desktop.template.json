@@ -5,7 +5,7 @@
       "cache-references",
       "cache-misses",
       "instructions",
-      "cycles",
+      "cycles"
     ]
   },
   "rabbitMQ": {

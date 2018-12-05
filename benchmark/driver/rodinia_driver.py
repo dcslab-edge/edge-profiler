@@ -34,7 +34,7 @@ class RodiniaDriver(BenchDriver):
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         cmd = '{0}/openmp/{1}/run' \
             .format(self._bench_home, self._name)
-
+        print(cmd)
         env = {
             'OMP_NUM_THREADS': str(self._num_threads),
             'GOMP_CPU_AFFINITY': str(self._binding_cores)

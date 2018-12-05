@@ -15,7 +15,7 @@ from ..utils.dvfs import DVFS
 from ..utils.hyphen import convert_to_hyphen, convert_to_set
 # from ..utils.numa_topology import NumaTopology
 # from ..utils.resctrl import ResCtrl
-
+from ..utils.machine_type import MachineChecker, NodeType
 
 class BenchDriver(metaclass=ABCMeta):
     class _Decorators:
@@ -195,6 +195,8 @@ class BenchDriver(metaclass=ABCMeta):
         while True:
             self._bench_proc_info = self._find_bench_proc()
             if self._bench_proc_info is not None:
+                print(self._bench_proc_info.name())
+                print(self._name)
                 await self._rename_group(f'{self._name}_{self._bench_proc_info.pid}')
                 # await self._resctrl_group.create_group()
                 # await self._resctrl_group.assign_llc(*masks)
@@ -261,14 +263,21 @@ class BenchDriver(metaclass=ABCMeta):
 
 
 def find_driver(workload_name) -> Type[BenchDriver]:
+    node_type = MachineChecker.get_node_type()
+    if node_type == NodeType.CPU:
+        from benchmark.driver.rodinia_driver import RodiniaDriver
+        bench_drivers = (RodiniaDriver,)
+    elif node_type == NodeType.IntegratedGPU:
+        from benchmark.driver.rodinia_driver import RodiniaDriver
+        from benchmark.driver.sparkgpu_driver import SparkGPUDriver
+        bench_drivers = (SparkGPUDriver, RodiniaDriver,)
     # from benchmark.driver.spec_driver import SpecDriver
     # from benchmark.driver.parsec_driver import ParsecDriver
-    # from benchmark.driver.rodinia_driver import RodiniaDriver
+    #from benchmark.driver.rodinia_driver import RodiniaDriver
     # from benchmark.driver.npb_driver import NPBDriver
-    from benchmark.driver.sparkgpu_driver import SparkGPUDriver
+    #from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 
     # bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
-    bench_drivers = (SparkGPUDriver,)
     print(bench_drivers)
     for driver in bench_drivers:
         if driver.has(workload_name):
@@ -281,7 +290,7 @@ def bench_driver(workload_name: str, workload_type: str, identifier: str, bindin
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
                  cbm_ranges: Union[str, List[str]] = None) \
         -> BenchDriver:
-    print("WORKLOAD:"+workload_name)
+    print("WORKLOAD: "+workload_name)
     _bench_driver = find_driver(workload_name)
 
     return _bench_driver(workload_name, workload_type, identifier, binding_cores, num_threads, numa_mem_nodes,

@@ -266,3 +266,7 @@ config.json
 experiments
 local_config
 *.iml
+density
+density_energy
+momentum
+
