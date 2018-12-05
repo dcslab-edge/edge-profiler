@@ -1,0 +1,16 @@
+{
+  "workloads": [
+    {
+      "name": "cfd",
+      "type": "fg",
+      "num_of_threads": 4,
+      "binding_cores": "0-3",
+      "numa_nodes": "0",
+      "cpu_freq": 2.1
+    }
+  ],
+  "launcher": {
+    "hyper-threading": false,
+    "stops_with_the_first": false
+  }
+}
