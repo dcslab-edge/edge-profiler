@@ -12,7 +12,9 @@ from benchmark.driver.base_driver import BenchDriver
 
 class SparkGPUDriver(BenchDriver):
     _benches: Set[str] = {'GpuDSArrayMult', 'GpuEnablerExample', 'GpuEnablerCodegen', 'GpuKMeans', 'GpuKMeansBatch',
-                          'GpuKMeansBatchSmall', 'SparkDSLR', 'SparkDSLRmod', 'SparkGPULR', 'perfDebug'}
+                          'GpuKMeansBatchSmall', 'SparkDSLR', 'SparkDSLRmod', 'SparkGPULR', 'perfDebug',
+                          'GpuKMeansCpu', 'GpuKMeansGpu', 'GpuKMeansBatchCpu', 'GpuKMeansBatchGpu', 'SparkDSLRCpu',
+                          'SparkDSLRGpu', 'SparkGPULRCpu', 'SparkGPULRGpu'}
     bench_name: str = 'sparkgpu'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
 

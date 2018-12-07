@@ -372,7 +372,7 @@ class RabbitMQFormatter(Formatter):
         self._event_names = tuple(perf_events)
         if tegra_events is not None:
             self._event_names += tuple(tegra_events)
-        print(self._event_names)
+        # print(self._event_names)
         self._req_num = 0
 
     @staticmethod
@@ -388,7 +388,7 @@ class RabbitMQFormatter(Formatter):
             raise ValueError(f'{val} is neither an int nor a float.')
 
     def format(self, record: LogRecord) -> str:
-        print(record.msg)
+        # print(record.msg)
         values = chain(map(self._convert_num, record.msg.split(',')), (self._req_num,))
         self._req_num += 1
         return json.dumps({k: v for k, v in zip(self._event_names, values)})
