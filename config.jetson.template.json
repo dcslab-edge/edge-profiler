@@ -2,8 +2,14 @@
   "perf": {
     "interval": 1000,
     "events": [
-      "r016",
-      "r013",
+      {
+        "event": "r016",
+        "alias": "llc_references"
+      },
+      {
+        "event": "r013",
+        "alias": "llc_misses"
+      },
       "instructions",
       "cycles"
     ]
@@ -11,10 +17,22 @@
   "tegrastats":{
     "interval": 1000,
     "events":[
-      "gr3d",
-      "gr3d_freq",
-      "emc",
-      "emc_freq"
+      {
+        "event": "gr3d",
+        "alias": "gpu_core_util"
+      },
+      {
+        "event": "gr3d_freq",
+        "alias": "gpu_core_freq"
+      },
+      {
+        "event": "emc",
+        "alias": "gpu_emc_util"
+      },
+      {
+        "event": "emc_freq",
+        "alias": "gpu_emc_freq"
+      }
     ]
   },
   "rabbitMQ": {
@@ -24,6 +42,6 @@
     }
   },
   "benchmark": {
-    "sparkgpu": "/home/nvidia/project/edge/edge-sched/GPUEnabler"
+    "sparkgpu": "/home/nvidia/ysnam/benchmarks/GPUEnabler"
   }
 }

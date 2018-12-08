@@ -2,8 +2,14 @@
   "perf": {
     "interval": 1000,
     "events": [
-      "cache-references",
-      "cache-misses",
+      {
+        "event": "cache-references",
+        "alias": "llc_references"
+      },
+      {
+        "event": "cache-misses",
+        "alias": "llc_misses"
+      },
       "instructions",
       "cycles"
     ]

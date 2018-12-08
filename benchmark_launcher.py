@@ -96,7 +96,8 @@ def create_benchmarks(bench_cfgs: Tuple[BenchConfig, ...],
 
     return (
         Benchmark(BenchConfig.gen_identifier(bench_cfg, bench_dict[bench_cfg.name]),
-                  bench_cfg, perf_cfg, tegra_cfg,  rabbit_cfg, work_space, logging.DEBUG if is_verbose else logging.INFO)
+                  bench_cfg, perf_cfg, tegra_cfg,  rabbit_cfg, work_space,
+                  logging.DEBUG if is_verbose else logging.INFO)
         for bench_cfg in bench_cfgs
     )
 
@@ -271,7 +272,8 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
         bench_cfgs = parse_workload_cfg(local_cfg_source['workloads'])
         perf_cfg = parse_perf_cfg(global_cfg_source['perf'], local_cfg_source.get('perf', {'extra_events': []}))
         if cur_node_type == NodeType.IntegratedGPU:
-            tegra_cfg = parse_perf_cfg(global_cfg_source['tegrastats'], local_cfg_source.get('tegrastas', {'extra_events':[]}))
+            tegra_cfg = parse_perf_cfg(global_cfg_source['tegrastats'],
+                                       local_cfg_source.get('tegrastas', {'extra_events': []}))
         elif cur_node_type == NodeType.CPU:
             tegra_cfg = None
         rabbit_cfg = parse_rabbit_mq_cfg(global_cfg_source['rabbitMQ'])

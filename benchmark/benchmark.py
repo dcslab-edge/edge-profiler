@@ -165,7 +165,7 @@ class Benchmark:
                 # print csv header
                 fp.write(','.join(self._perf_config.event_names))
                 if self._node_type == NodeType.IntegratedGPU:
-                    fp.write(',gr3d,gr3d_freq,emc,emc_freq'+'\n')
+                    fp.write(',gpu_core_util,gpu_core_freq,gpu_emc_util,gpu_emc_freq'+'\n')
 
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
