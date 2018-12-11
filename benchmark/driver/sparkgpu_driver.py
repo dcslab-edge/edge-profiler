@@ -47,7 +47,7 @@ class SparkGPUDriver(BenchDriver):
 
         env = os.environ.copy()
         env['M2_HOME'] = '/home/nvidia/.m2'
-        env['MAVEN_HOME'] = '/opt/apache-maven-3.5.4'
+        env['MAVEN_HOME'] = '/home/nvidia/dcslab/packages/apache-maven-3.6.0'
         env['PATH'] = env['MAVEN_HOME'] + '/bin/:' + env['PATH']
 
         return await self._cgroup.exec_command(cmd, env=env,

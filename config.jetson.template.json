@@ -42,6 +42,6 @@
     }
   },
   "benchmark": {
-    "sparkgpu": "/home/nvidia/ysnam/benchmarks/GPUEnabler"
+    "sparkgpu": "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/GPUEnabler"
   }
 }
