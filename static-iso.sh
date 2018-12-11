@@ -25,14 +25,14 @@ echo Bench starts...
 
 # ==========================
 
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansBatchCpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansBatchGpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansCpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansGpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkDSLRCpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkDSLRGpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkGPULRCpu
-python3.6 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkGPULRGpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansBatchCpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansBatchGpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansCpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/GpuKMeansGpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkDSLRCpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkDSLRGpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkGPULRCpu
+python3.7 benchmark_launcher.py ../experiments/single-node/jetson_tx2/solorun/sparkgpu/SparkGPULRGpu
 
 
 
