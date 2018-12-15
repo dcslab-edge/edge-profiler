@@ -62,7 +62,7 @@ class Benchmark:
     _stream_formatter = ColoredFormatter('%(asctime)s.%(msecs)03d [%(levelname)8s] %(name)14s $ %(message)s')
 
     def __init__(self, identifier: str, bench_config: BenchConfig, perf_config: PerfConfig, tegra_config: TegraConfig,
-                 rabbit_mq_config: RabbitMQConfig, workspace: Path, logger_level: int = logging.INFO):
+                 rabbit_mq_config: RabbitMQConfig, workspace: Path, max_benches: int, logger_level: int = logging.INFO):
         self._identifier: str = identifier
         self._perf_config: PerfConfig = perf_config
         self._tegra_config: TegraConfig = tegra_config
@@ -71,6 +71,7 @@ class Benchmark:
         self._bench_driver: BenchDriver = bench_config.generate_driver(identifier)
         self._perf: Optional[asyncio.subprocess.Process] = None
         self._tegra: Optional[asyncio.subprocess.Process] = None
+        self._max_benches: int = max_benches
         self._end_time: Optional[float] = None
         self._node_type = MachineChecker.get_node_type()
 
@@ -145,14 +146,16 @@ class Benchmark:
                 rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                                                     self._bench_driver.wl_type, self._bench_driver.pid,
                                                     self._perf.pid, self._perf_config.interval,
-                                                    self._tegra.pid, self._tegra_config.interval)
+                                                    self._tegra.pid, self._tegra_config.interval,
+                                                    self._max_benches)
                 rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,
                                                                  self._tegra_config.event_names))
 
             elif self._node_type == NodeType.CPU:
                 rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                                                     self._bench_driver.wl_type, self._bench_driver.pid,
-                                                    self._perf.pid, self._perf_config.interval, None, None)
+                                                    self._perf.pid, self._perf_config.interval, None, None,
+                                                    self._max_benches)
                 rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names, None))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
@@ -308,6 +311,10 @@ class Benchmark:
     @property
     @_Decorators.ensure_invoked
     def launched_time(self) -> float:
+        """
+        The launched_time is different based on the benchmark name
+        :return:
+        """
         return self._bench_driver.created_time
 
     @property
@@ -334,7 +341,8 @@ class Benchmark:
 
 class RabbitMQHandler(Handler):
     def __init__(self, rabbit_mq_config: RabbitMQConfig, bench_name: str, bench_type: str, bench_pid: int,
-                 perf_pid: int, perf_interval: int, tegra_pid: Optional[int], tegra_interval: Optional[int]):
+                 perf_pid: int, perf_interval: int, tegra_pid: Optional[int], tegra_interval: Optional[int],
+                 max_benches: int):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -346,7 +354,7 @@ class RabbitMQHandler(Handler):
         # Notify creation of this benchmark to scheduler
         self._channel.queue_declare(queue=rabbit_mq_config.creation_q_name)
         self._channel.basic_publish(exchange='', routing_key=rabbit_mq_config.creation_q_name,
-                body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval}')
+                body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval},{max_benches}')
 
     def emit(self, record: LogRecord):
         formatted: str = self.format(record)

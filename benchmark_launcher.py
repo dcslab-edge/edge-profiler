@@ -86,6 +86,7 @@ def create_benchmarks(bench_cfgs: Tuple[BenchConfig, ...],
                       tegra_cfg: Optional[TegraConfig],
                       rabbit_cfg: RabbitMQConfig,
                       work_space: Path,
+                      max_benches: int,
                       is_verbose: bool) -> Generator[Benchmark, Any, None]:
     bench_dict: Dict[str, List[BenchConfig]] = dict()
 
@@ -96,7 +97,7 @@ def create_benchmarks(bench_cfgs: Tuple[BenchConfig, ...],
 
     return (
         Benchmark(BenchConfig.gen_identifier(bench_cfg, bench_dict[bench_cfg.name]),
-                  bench_cfg, perf_cfg, tegra_cfg,  rabbit_cfg, work_space,
+                  bench_cfg, perf_cfg, tegra_cfg,  rabbit_cfg, work_space, max_benches,
                   logging.DEBUG if is_verbose else logging.INFO)
         for bench_cfg in bench_cfgs
     )
@@ -270,6 +271,7 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
         local_cfg_source: Dict[str, Any] = json.load(local_config_fp)
         global_cfg_source: Dict[str, Any] = json.load(global_config_fp)
         bench_cfgs = parse_workload_cfg(local_cfg_source['workloads'])
+        max_benches = len(bench_cfgs)
         perf_cfg = parse_perf_cfg(global_cfg_source['perf'], local_cfg_source.get('perf', {'extra_events': []}))
         if cur_node_type == NodeType.IntegratedGPU:
             tegra_cfg = parse_perf_cfg(global_cfg_source['tegrastats'],
@@ -323,7 +325,7 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
 
         a_task.remove_done_callback(store_runtime)
 
-    benches = tuple(create_benchmarks(bench_cfgs, perf_cfg, tegra_cfg, rabbit_cfg, workspace, verbose))
+    benches = tuple(create_benchmarks(bench_cfgs, perf_cfg, tegra_cfg, rabbit_cfg, workspace, max_benches, verbose))
 
     loop.add_signal_handler(signal.SIGHUP, stop_all)
     loop.add_signal_handler(signal.SIGTERM, stop_all)
