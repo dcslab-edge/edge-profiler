@@ -57,6 +57,7 @@ class NodeManager:
         bench_preference = job_description[2]
         config_file = self._node_mgr_path / f'{bench_name}_{bench_type}_{bench_preference}' / 'config.json'
 
+        # FIXME: hard coded
         # Dict[str, Dict[str, Any]]
         output = dict()
         config = dict()
