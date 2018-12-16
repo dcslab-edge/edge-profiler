@@ -1,7 +1,7 @@
 {
   "workloads": [
     {
-      "name": "dataStreamProcess",
+      "name": "sparkgpu_receiver_code",
       "type": "fg",
       "num_of_threads": 4,
       "binding_cores": "0,3-5",
