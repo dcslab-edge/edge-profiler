@@ -42,6 +42,9 @@
     }
   },
   "benchmark": {
-    "sparkgpu": "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/GPUEnabler"
+    "sparkgpu": "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/GPUEnabler",
+    "data-stream-python" : "/home/nvidia/dcslab/benchmarks/data-stream-python",
+    "data-stream-scala" : "/home/nvidia/dcslab/benchmarks/data-stream-scala",
+    "spark-submit" : "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/SparkGPU"
   }
 }

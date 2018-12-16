@@ -1,7 +1,7 @@
 {
   "workloads": [
     {
-      "name": "SparkDSLR",
+      "name": "dataStreamProcess",
       "type": "fg",
       "num_of_threads": 4,
       "binding_cores": "0,3-5",
