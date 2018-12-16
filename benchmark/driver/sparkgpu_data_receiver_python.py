@@ -39,7 +39,7 @@ class SparkGPUDataReceiverPythonDriver(BenchDriver):
         env['MAVEN_HOME'] = '/home/nvidia/dcslab/packages/apache-maven-3.6.0'
         env['PATH'] = env['MAVEN_HOME'] + '/bin/:' + env['PATH']
 
-        proc=Popen(['python3.7',signal_invoker_home+'/signal_invoker.py'])
+        proc=Popen(['python3.7',signal_invoker_home+'/signal_invoker.py',BenchDriver.get_bench_home('local-ip-address')])
         
         self.sparkGPU_launched_time = time.time()
         pid = await self._cgroup.exec_command(cmd, env=env,
