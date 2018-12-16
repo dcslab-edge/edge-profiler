@@ -5,6 +5,7 @@ import os
 import shlex
 from typing import Optional, Set
 import time
+from time import sleep
 import psutil
 
 from benchmark.driver.base_driver import BenchDriver
@@ -12,7 +13,7 @@ from subprocess import Popen
 
 
 class SparkGPUDataReceiverPythonDriver(BenchDriver):
-    _benches: Set[str] = {'dataStreamProcess'}
+    _benches: Set[str] = {'sparkgpu_receiver_code'}
     bench_name: str = 'spark-submit'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
 
@@ -41,6 +42,8 @@ class SparkGPUDataReceiverPythonDriver(BenchDriver):
         proc=Popen(['python3.7',signal_invoker_home+'/signal_invoker.py'])
         
         self.sparkGPU_launched_time = time.time()
-        await self._cgroup.exec_command(cmd, env=env,
+        pid = await self._cgroup.exec_command(cmd, env=env,
                                                stdout=asyncio.subprocess.DEVNULL,
                                                stderr=asyncio.subprocess.DEVNULL)
+        sleep(3)
+        return pid

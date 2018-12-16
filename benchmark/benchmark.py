@@ -198,6 +198,9 @@ class Benchmark:
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
+                print("a LOOP!")
+                print("self_running?:"+str(self._bench_driver.is_running))
+                print("self._perf? :"+str(self._perf.returncode))
 
             logger.info('end of monitoring loop')
 
@@ -211,6 +214,7 @@ class Benchmark:
 
         finally:
             try:
+                print("finally:self_running?:"+str(self._bench_driver.is_running))
                 self._kill_perf()
                 if self._node_type == NodeType.IntegratedGPU:
                     self._kill_tegra()
@@ -315,7 +319,7 @@ class Benchmark:
         The launched_time is different based on the benchmark name
         :return:
         """
-        if(self._bench_driver.bench_name == 'data-stream'):
+        if(self._bench_driver.bench_name == 'spark-submit'):
           return self._bench_driver.sparkGPU_launched_time
         else :
           return self._bench_driver.created_time
