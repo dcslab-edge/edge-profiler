@@ -315,7 +315,10 @@ class Benchmark:
         The launched_time is different based on the benchmark name
         :return:
         """
-        return self._bench_driver.created_time
+        if(self._bench_driver.bench_name == 'data-stream')
+          return self._bench_driver.sparkGPU_launched_time
+        else
+          return self._bench_driver.created_time
 
     @property
     def identifier(self) -> str:
