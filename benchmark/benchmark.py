@@ -198,9 +198,9 @@ class Benchmark:
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
-                print("a LOOP!")
-                print("self_running?:"+str(self._bench_driver.is_running))
-                print("self._perf? :"+str(self._perf.returncode))
+                #print("a LOOP!")
+                #print("self_running?:"+str(self._bench_driver.is_running))
+                #print("self._perf? :"+str(self._perf.returncode))
 
             logger.info('end of monitoring loop')
 
