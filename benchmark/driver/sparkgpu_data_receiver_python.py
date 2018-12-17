@@ -13,7 +13,7 @@ from subprocess import Popen
 
 
 class SparkGPUDataReceiverPythonDriver(BenchDriver):
-    _benches: Set[str] = {'sparkgpu_receiver_code'}
+    _benches: Set[str] = {'SPReceiver'}
     bench_name: str = 'spark-submit'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
 
