@@ -377,19 +377,25 @@ def main():
     args = parser.parse_args()
 
     dirs = list()
-
+    print(args.config_dir)
     for path in args.config_dir:  # type: str
         if not path.endswith('/'):
             path += '/'
-
+            print(path)
         dirs += glob.glob(path)
+
+        print(dirs)
+
 
     loop = asyncio.get_event_loop()
     try:
         print_log = args.print_log
         print_metric_log = args.print_metric_log
-
+        print("x")
+        print(dirs)
+        print(enumerate(dirs))
         for i, workspace in enumerate(dirs):
+            print(i)
             if i is not 0:
                 time.sleep(10)
 
