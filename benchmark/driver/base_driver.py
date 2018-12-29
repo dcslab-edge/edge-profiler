@@ -160,7 +160,7 @@ class BenchDriver(metaclass=ABCMeta):
 
         await self._cgroup.create_group()
         await self._cgroup.assign_cpus(self._binding_cores)
-        print(f'self._binding_cores (#cores): {len(self._binding_cores)}')
+        print(f'self._binding_cores (cpu id): {self._binding_cores}')
         mem_sockets: str = await self.__get_effective_mem_nodes()
         await self._cgroup.assign_mems(mem_sockets)
         print(f'self._cpu_percent: {self._cpu_percent}')
@@ -274,13 +274,13 @@ class BenchDriver(metaclass=ABCMeta):
 
 def find_driver(workload_name) -> Type[BenchDriver]:
     node_type = MachineChecker.get_node_type()
-    from benchmark.driver.sparkgpu_data_receiver_python import SparkGPUDataReceiverPythonDriver
+    #from benchmark.driver.sparkgpu_data_receiver_python import SparkGPUDataReceiverPythonDriver
     if node_type == NodeType.CPU:
         from benchmark.driver.rodinia_driver import RodiniaDriver
-        bench_drivers = (RodiniaDriver,SparkGPUDataReceiverPythonDriver)
+        bench_drivers = (RodiniaDriver,)
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
-        bench_drivers = (SparkGPUDriver,SparkGPUDataReceiverPythonDriver)
+        bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
     # from benchmark.driver.spec_driver import SpecDriver
     # from benchmark.driver.parsec_driver import ParsecDriver
     # from benchmark.driver.rodinia_driver import RodiniaDriver

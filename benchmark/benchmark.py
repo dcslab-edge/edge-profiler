@@ -169,6 +169,8 @@ class Benchmark:
                 fp.write(','.join(self._perf_config.event_names))
                 if self._node_type == NodeType.IntegratedGPU:
                     fp.write(',gpu_core_util,gpu_core_freq,gpu_emc_util,gpu_emc_freq'+'\n')
+                elif self._node_type == NodeType.CPU:
+                    fp.write('\n')
 
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
@@ -198,9 +200,6 @@ class Benchmark:
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
-                #print("a LOOP!")
-                #print("self_running?:"+str(self._bench_driver.is_running))
-                #print("self._perf? :"+str(self._perf.returncode))
 
             logger.info('end of monitoring loop')
 
@@ -214,7 +213,6 @@ class Benchmark:
 
         finally:
             try:
-                print("finally:self_running?:"+str(self._bench_driver.is_running))
                 self._kill_perf()
                 if self._node_type == NodeType.IntegratedGPU:
                     self._kill_tegra()

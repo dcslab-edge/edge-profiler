@@ -255,7 +255,6 @@ GLOBAL_CFG_PATH: Path = Path(__file__).resolve().parent / 'config.json'
 
 
 def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, print_metric_log: bool, verbose: bool):
-    print("launched")
     config_file = workspace / 'config.json'
     cur_node_type = MachineChecker.get_node_type()
 
