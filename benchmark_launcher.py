@@ -54,7 +54,7 @@ def parse_perf_cfg(global_cfg: Dict[str, Any], local_cfg: Optional[Dict[str, Any
 
 
 def parse_rabbit_mq_cfg(rabbit_cfg: Dict[str, Any]) -> RabbitMQConfig:
-    return RabbitMQConfig(rabbit_cfg['host'], rabbit_cfg['queue_name']['workload_creation'])
+    return RabbitMQConfig(rabbit_cfg['host'], rabbit_cfg['exchange_name']['workload_creation'])
 
 
 def parse_launcher_cfg(launcher_cfg: Optional[Dict[str, Union[bool, List[str]]]]) -> LauncherConfig:
@@ -377,25 +377,16 @@ def main():
     args = parser.parse_args()
 
     dirs = list()
-    print(args.config_dir)
     for path in args.config_dir:  # type: str
         if not path.endswith('/'):
             path += '/'
-            print(path)
         dirs += glob.glob(path)
-
-        print(dirs)
-
 
     loop = asyncio.get_event_loop()
     try:
         print_log = args.print_log
         print_metric_log = args.print_metric_log
-        print("x")
-        print(dirs)
-        print(enumerate(dirs))
         for i, workspace in enumerate(dirs):
-            print(i)
             if i is not 0:
                 time.sleep(10)
 
