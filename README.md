@@ -5,9 +5,13 @@
 workload의 수행 및 performance 측정을 자동화하는 코드를 담고 있다.
 
 실행을 위해서는, git repo 경로 안에 config.json파일을 만들어 두어야 하며, 실행 결과 및 로그를 저장할 디렉토리를 지정해주어야 한다
+
+Spark Streaming for CPU 실험의 경우,
+반드시 실행하기 전에 data-stream-python이 'Data all Generated'를 출력하고 나서 실행되어야한다.
+
 python3.7 환경에서 실행
 
-python3.7 benchmark_launcher.py <설정 파일 디렉토리>
+    python3.7 benchmark_launcher.py <설정 파일 디렉토리>
 
 
 ##실험방법
