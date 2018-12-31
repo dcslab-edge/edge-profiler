@@ -269,4 +269,4 @@ local_config
 density
 density_energy
 momentum
-
+*.DS_Store
