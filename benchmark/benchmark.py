@@ -355,7 +355,7 @@ class RabbitMQHandler(Handler):
         self._channel: BlockingChannel = self._connection.channel()
 
         # queue for emitting metrics
-        self._bench_exchange_name: str = f'{bench_name}({bench_pid})'
+        self._bench_exchange_name: str = f'ex-{rabbit_mq_config.host_name}-{bench_name}({bench_pid})'
         # self._channel.queue_declare(queue=self._queue_name)
         self._channel.exchange_declare(exchange=self._bench_exchange_name, exchange_type='fanout')
 
