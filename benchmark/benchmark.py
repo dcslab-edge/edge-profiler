@@ -160,6 +160,7 @@ class Benchmark:
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
             metric_logger.addHandler(rabbit_mq_handler)
+            #metric_logger.addHandler(node_mgr_mq_handler)
 
             if print_metric_log:
                 metric_logger.addHandler(logging.StreamHandler())
@@ -169,6 +170,8 @@ class Benchmark:
                 fp.write(','.join(self._perf_config.event_names))
                 if self._node_type == NodeType.IntegratedGPU:
                     fp.write(',gpu_core_util,gpu_core_freq,gpu_emc_util,gpu_emc_freq'+'\n')
+                elif self._node_type == NodeType.CPU:
+                    fp.write('\n')
 
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
@@ -198,9 +201,6 @@ class Benchmark:
 
                 if not ignore_flag:
                     metric_logger.info(','.join(record))
-                #print("a LOOP!")
-                #print("self_running?:"+str(self._bench_driver.is_running))
-                #print("self._perf? :"+str(self._perf.returncode))
 
             logger.info('end of monitoring loop')
 
@@ -214,7 +214,6 @@ class Benchmark:
 
         finally:
             try:
-                print("finally:self_running?:"+str(self._bench_driver.is_running))
                 self._kill_perf()
                 if self._node_type == NodeType.IntegratedGPU:
                     self._kill_tegra()
@@ -355,30 +354,36 @@ class RabbitMQHandler(Handler):
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
         self._channel: BlockingChannel = self._connection.channel()
 
-        self._queue_name: str = f'{bench_name}({bench_pid})'
-        self._channel.queue_declare(queue=self._queue_name)
+        # queue for emitting metrics
+        self._bench_exchange_name: str = f'ex-{rabbit_mq_config.host_name}-{bench_name}({bench_pid})'
+        # self._channel.queue_declare(queue=self._queue_name)
+        self._channel.exchange_declare(exchange=self._bench_exchange_name, exchange_type='fanout')
 
-        # Notify creation of this benchmark to scheduler
-        self._channel.queue_declare(queue=rabbit_mq_config.creation_q_name)
-        self._channel.basic_publish(exchange='', routing_key=rabbit_mq_config.creation_q_name,
+        # Notify creation of this benchmark to scheduler or node_manager
+        #self._channel.queue_declare(queue=notify_q_name)
+        self._creation_exchange_name: str = f'{rabbit_mq_config.creation_exchange_name}({rabbit_mq_config.host_name})'
+        self._channel.exchange_declare(exchange=self._creation_exchange_name, exchange_type='fanout')
+        self._channel.basic_publish(exchange=self._creation_exchange_name, routing_key='',
                 body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval},{max_benches}')
 
-    def emit(self, record: LogRecord):
+    def emit(self,record: LogRecord):
         formatted: str = self.format(record)
 
-        self._channel.basic_publish(exchange='', routing_key=self._queue_name, body=formatted)
+        #self._channel.basic_publish(exchange='', routing_key=self._queue_name, body=formatted)
+        self._channel.basic_publish(exchange=self._bench_exchange_name, routing_key='', body=formatted)
 
     def close(self):
         super().close()
         try:
-            self._channel.queue_delete(self._queue_name)
+            self._channel.exchange_delete(self._bench_exchange_name)
+            #self._channel.queue_delete(self._bench_exchange_name)
         except:
             pass
         self._connection.close()
 
     def __repr__(self):
         level = logging.getLevelName(self.level)
-        return f'<{self.__class__.__name__} {self._queue_name} ({level})>'
+        return f'<{self.__class__.__name__} {self._bench_exchange_name} ({level})>'
 
 
 class RabbitMQFormatter(Formatter):

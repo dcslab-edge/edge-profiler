@@ -270,3 +270,5 @@ density
 density_energy
 momentum
 *.DS_Store
+=======
+result.txt

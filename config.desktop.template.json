@@ -15,9 +15,9 @@
     ]
   },
   "rabbitMQ": {
-    "host": "localhost",
+    "host": "sdcX",
     "queue_name": {
-      "workload_creation": "workload_creation"
+      "workload_creation": "sdcX_workload_creation"
     }
   },
   "benchmark": {

@@ -36,9 +36,9 @@
     ]
   },
   "rabbitMQ": {
-    "host": "localhost",
+    "host": "jetsonX",
     "queue_name": {
-      "workload_creation": "workload_creation"
+      "workload_creation": "jetsonX_workload_creation"
     }
   },
   "benchmark": {

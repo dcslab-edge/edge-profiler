@@ -12,7 +12,7 @@ from benchmark.utils.machine_type import MachineChecker, NodeType
 class NodeManager:
     # FIXME: hard coded
     #_NODE_IP = '147.46.242.201'     # Jetson1
-    _NODE_IP = '147.46.242.243'    # Jetson2
+    _NODE_IP = '147.46.240.168'    # Jetson2
     # _NODE_IP = '147.46.242.219'    # SDC1
     # _NODE_IP = '147.46.242.206'    # SDC2
 
@@ -37,7 +37,7 @@ class NodeManager:
                 break
             print(f'{req}')
             output = self.parse_request(req)
-            config_file = self.make_config_json(output)
+            config_file = self.make_job_config_json(output)
             self.invoke_new_bench(req, config_file)
 
         sock.close()
@@ -51,11 +51,16 @@ class NodeManager:
         bench_preferences = req[2]  # job_preferences   e.g., cpu
         return bench_name, bench_type, bench_preferences
 
-    def make_config_json(self, job_description):
+    def make_job_config_json(self, job_description):
+        """
+        This function makes job.json which describes a job for executing the job
+        :param job_description:
+        :return:
+        """
         bench_name = job_description[0]
         bench_type = job_description[1]
         bench_preference = job_description[2]
-        config_file = self._node_mgr_path / f'{bench_name}_{bench_type}_{bench_preference}' / 'config.json'
+        config_file = self._node_mgr_path / f'{bench_name}_{bench_type}_{bench_preference}' / 'job.json'
 
         # FIXME: hard coded
         # Dict[str, Dict[str, Any]]
