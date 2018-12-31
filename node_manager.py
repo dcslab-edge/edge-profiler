@@ -18,7 +18,7 @@ class NodeManager:
 
     def __init__(self):
         self._ip_addr = NodeManager._NODE_IP
-        self._port = '10020'
+        self._port = '10010'
         self._node_mgr_path = Path.cwd() / 'node_mgr'
         self._node_type = MachineChecker.get_node_type()
 
@@ -88,6 +88,7 @@ class NodeManager:
 
     def run_server(self, ip_addr: str, port: str):
         # FIXME: ip_addr should be host ip itself
+        print('Node Manager Listening...')
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((ip_addr, int(port)))
             while True:

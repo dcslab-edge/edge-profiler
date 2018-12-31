@@ -274,7 +274,7 @@ class BenchDriver(metaclass=ABCMeta):
 
 def find_driver(workload_name) -> Type[BenchDriver]:
     node_type = MachineChecker.get_node_type()
-    #from benchmark.driver.sparkgpu_data_receiver_python import SparkGPUDataReceiverPythonDriver
+    from benchmark.driver.sparkgpu_data_receiver_python import SparkGPUDataReceiverPythonDriver
     if node_type == NodeType.CPU:
         from benchmark.driver.rodinia_driver import RodiniaDriver
         bench_drivers = (RodiniaDriver,)
