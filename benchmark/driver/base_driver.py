@@ -167,8 +167,8 @@ class BenchDriver(metaclass=ABCMeta):
         print(f'self._cpu_percent: {self._cpu_percent}')
         if self._cpu_percent is not None:
             await self._cgroup.limit_cpu_quota(self._cpu_percent)
+        print(f'self._memory_limit: {self._memory_limit}')
         if self._memory_limit is not None:
-            print(f'self._memory_limit: {self._memory_limit}')
             await self._cgroup.limit_memory_percent(self._memory_limit)
 
         self._async_proc = await self._launch_bench()
