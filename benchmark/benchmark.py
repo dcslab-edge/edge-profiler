@@ -178,12 +178,14 @@ class Benchmark:
             # perf polling loop
 
             num_of_events = len(self._perf_config.events)
+            # TODO: Perf Ver. can be a problem (ref. to benchmark_copy.py)
             while self._bench_driver.is_running and self._perf.returncode is None:
                 record = []
                 ignore_flag = False
 
                 for _ in range(num_of_events):
                     raw_line = await self._perf.stderr.readline()
+
                     line = raw_line.decode().strip()
                     try:
                         value = line.split(',')[1]

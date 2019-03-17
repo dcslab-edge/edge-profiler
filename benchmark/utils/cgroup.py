@@ -8,11 +8,15 @@ import os
 import shlex
 from typing import Iterable, Set, Optional
 from .hyphen import convert_to_set
+from .machine_type import MachineChecker, NodeType
 
 
 class Cgroup:
     CPUSET_MOUNT_POINT = '/sys/fs/cgroup/cpuset'
     CPU_MOUNT_POINT = '/sys/fs/cgroup/cpu'
+    MEMORY_MOUNT_POINT = '/sys/fs/cgroup/memory'
+    SERVER_MEMORY_SIZE = 32*1024*1024*1024
+    JETSON_MEMORY_SIZE = 8*1024*1024*1024
 
     def __init__(self, group_name: str, controllers: str) -> None:
         self._group_name: str = group_name
@@ -43,6 +47,12 @@ class Cgroup:
         proc = await asyncio.create_subprocess_exec(
             'sudo', 'mv', f'{Cgroup.CPU_MOUNT_POINT}/{self._group_name}',
             f'{Cgroup.CPU_MOUNT_POINT}/{new_group_name}'
+        )
+        await proc.communicate()
+
+        proc = await asyncio.create_subprocess_exec(
+            'sudo', 'mv', f'{Cgroup.MEMORY_MOUNT_POINT}/{self._group_name}',
+            f'{Cgroup.MEMORY_MOUNT_POINT}/{new_group_name}'
         )
         await proc.communicate()
 
@@ -77,6 +87,19 @@ class Cgroup:
         period_proc = await asyncio.create_subprocess_exec('cgset', '-r', f'cpu.cfs_period_us={period}',
                                                            self._group_name)
         await period_proc.communicate()
+
+    async def limit_memory_percent(self, limit_percentage: float) -> None:
+        node_type = MachineChecker.get_node_type()
+        if node_type == NodeType.IntegratedGPU:
+            memory_size = Cgroup.JETSON_MEMORY_SIZE
+        if node_type == NodeType.DiscreteGPU:
+            memory_size = Cgroup.SERVER_MEMORY_SIZE
+        else:
+            raise ValueError(f'Can not set appropriate memory size "{memory_size}"')
+        limit_bytes = int(limit_percentage * memory_size)
+        proc = await asyncio.create_subprocess_exec('cgset', '-r', f'memory.limit_in_bytes={limit_bytes}'
+                                                    , self._group_name)
+        await proc.communicate()
 
     async def add_tasks(self, pids: Iterable[int]) -> None:
         proc = await asyncio.create_subprocess_exec('cgclassify', '-g', self._group_path, '--sticky', *map(str, pids))
