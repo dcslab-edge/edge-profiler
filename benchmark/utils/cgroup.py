@@ -90,11 +90,16 @@ class Cgroup:
 
     async def limit_memory_percent(self, limit_percentage: float) -> None:
         node_type = MachineChecker.get_node_type()
+        print(f'node_type: {node_type}')
         if node_type == NodeType.IntegratedGPU:
+            print(f'IntegratedGPU')
             memory_size = Cgroup.JETSON_MEMORY_SIZE
-        if node_type == NodeType.DiscreteGPU:
+        elif node_type == NodeType.DiscreteGPU:
+            print(f'DiscreteGPU')
             memory_size = Cgroup.SERVER_MEMORY_SIZE
         else:
+            print(f'Unknown Node Type')
+            print(f'node_type: {node_type}')
             raise ValueError(f'Can not set appropriate memory size "{memory_size}"')
         limit_bytes = int(limit_percentage * memory_size)
         proc = await asyncio.create_subprocess_exec('cgset', '-r', f'memory.limit_in_bytes={limit_bytes}'
