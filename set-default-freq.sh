@@ -20,3 +20,7 @@ sudo sh -c 'echo userspace > /sys/devices/gpu.0/devfreq/17000000.gp10b/governor'
 sudo sh -c 'echo 1300500000 > /sys/devices/gpu.0/devfreq/17000000.gp10b/userspace/set_freq'
  
 echo GPU Freq. Init. ends...
+
+echo Disable Denvor Vector Processor...
+sudo sh -c 'echo 0 > /sys/devices/system/cpu/cpu1/online'
+sudo sh -c 'echo 0 > /sys/devices/system/cpu/cpu2/online'

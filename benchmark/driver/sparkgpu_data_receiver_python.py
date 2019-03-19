@@ -33,7 +33,7 @@ class SparkGPUDataReceiverPythonDriver(BenchDriver):
         data_stream_python_home = BenchDriver.get_bench_home('data-stream-python')
         signal_invoker_home = data_stream_python_home+'/signal-invoker'
         #cmd = '{0}/bin/spark-submit {1}/receiver/sparkgpu_receiver_code.py'.format(self._bench_home, data_stream_python_home)
-        cmd = '{0}/bin/spark-submit {1}/receiver/SPReceive.py'.format(self._bench_home, data_stream_python_home)
+        cmd = '{0}/bin/spark-submit {1}/receiver/SPReceive.py {2}'.format(self._bench_home, data_stream_python_home,BenchDriver.get_bench_home('stream-ip-address'))
 
         env = os.environ.copy()
         env['M2_HOME'] = '/home/nvidia/.m2'

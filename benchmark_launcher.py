@@ -275,7 +275,7 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
         perf_cfg = parse_perf_cfg(global_cfg_source['perf'], local_cfg_source.get('perf', {'extra_events': []}))
         if cur_node_type == NodeType.IntegratedGPU:
             tegra_cfg = parse_perf_cfg(global_cfg_source['tegrastats'],
-                                       local_cfg_source.get('tegrastas', {'extra_events': []}))
+                                       local_cfg_source.get('tegrastats', {'extra_events': []}))
         elif cur_node_type == NodeType.CPU:
             tegra_cfg = None
         rabbit_cfg = parse_rabbit_mq_cfg(global_cfg_source['rabbitMQ'])

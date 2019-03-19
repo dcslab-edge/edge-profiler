@@ -272,3 +272,7 @@ momentum
 *.DS_Store
 =======
 result.txt
+
+# Pytorch Train
+checkpoint.pth.tar
+model_best.pth.tar

@@ -284,7 +284,9 @@ def find_driver(workload_name) -> Type[BenchDriver]:
         bench_drivers = (RodiniaDriver,)
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
-        bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
+        from benchmark.driver.pytorch_driver import PyTorchDriver
+        #bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
+        bench_drivers = (SparkGPUDriver, PyTorchDriver)
 
     print(bench_drivers)
     for driver in bench_drivers:
