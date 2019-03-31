@@ -8,7 +8,8 @@ from benchmark.driver.base_driver import BenchDriver, bench_driver
 class BenchConfig:
     def __init__(self, workload_name: str, workload_type: str, binding_cores: str, num_of_threads: int = None,
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
-                 cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None):
+                 cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None,
+                 batch_size: int = None):
         self._workload_name: str = workload_name
         self._workload_type: str = workload_type
         self._binding_cores: str = binding_cores
@@ -19,6 +20,7 @@ class BenchConfig:
         self._cbm_ranges: Optional[Union[str, List[str]]] = cbm_ranges
         self._gpu_freq: Optional[int] = gpu_freq    # Jetson gpu_freq_max : 1300500000
         self._memory_limit: Optional[float] = memory_limit
+        self._batch_size: Optional[int] = batch_size
 
     @property
     def name(self) -> str:
@@ -60,10 +62,14 @@ class BenchConfig:
     def memory_limit(self) -> Optional[float]:
         return self._memory_limit
 
+    @property
+    def batch_size(self) -> Optional[float]:
+        return self._batch_size
+
     def generate_driver(self, identifier: str) -> BenchDriver:
         return bench_driver(self._workload_name, self._workload_type, identifier, self._binding_cores,
                             self._num_of_threads, self._numa_mem_nodes, self._cpu_freq, self._cpu_percent,
-                            self._cbm_ranges, self._gpu_freq, self._memory_limit)
+                            self._cbm_ranges, self._gpu_freq, self._memory_limit, self._batch_size)
 
     @staticmethod
     def gen_identifier(target: 'BenchConfig', configs: List['BenchConfig']) -> str:
@@ -76,6 +82,7 @@ class BenchConfig:
         cbm_same = True
         gpu_freq_same = True
         memory_limit_same = True
+        batch_size_same = True
 
         index_in_same_cfg = None
         num_of_same_cfg = 0
@@ -101,6 +108,8 @@ class BenchConfig:
                     _all_same = gpu_freq_same = False
             if target.memory_limit != config._memory_limit:
                 _all_same = memory_limit_same = False
+            if target.batch_size != config._batch_size:
+                _all_same = batch_size_same = False
 
             if _all_same:
                 if target is config:
@@ -128,6 +137,8 @@ class BenchConfig:
                 names.append(f'{target.gpu_freq}GHz')
         if not memory_limit_same:
             names.append(f'{target.memory_limit}Bytes')
+        if not batch_size_same:
+            names.append(f'{target.batch_size}')
         if num_of_same_cfg is not 0:
             names.append(str(index_in_same_cfg))
 

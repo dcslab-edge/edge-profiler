@@ -37,8 +37,8 @@
   },
   "rabbitMQ": {
     "host": "jetsonX",
-    "queue_name": {
-      "workload_creation": "jetsonX_workload_creation"
+    "exchange_name": {
+      "workload_creation": "workload_creation"
     }
   },
   "benchmark": {
@@ -46,6 +46,7 @@
     "data-stream-python" : "/home/nvidia/dcslab/benchmarks/data-stream-python",
     "data-stream-scala" : "/home/nvidia/dcslab/benchmarks/data-stream-scala",
     "spark-submit" : "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/SparkGPU",
-    "local-ip-address" : "147.46.242.243"
+    "local-ip-address" : "147.46.242.243",
+    "pytorch" : "/ssd/test"
   }
 }
