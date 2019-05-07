@@ -30,17 +30,28 @@ class SSDDriver(BenchDriver):
                 exec_cmdline = cmdline[1]
                 cmdline_list = exec_cmdline.split('/')
                 exec_name = cmdline_list[len(cmdline_list)-1].rstrip('.py')
-                model = ''
-                #for word in cmdline:
-                #    if word == '':
+                model = 'vgg' #FIXME: hard-coded
+                pu_type = ''
+                for word in cmdline_list:
+                    if word == 'False':
+                        pu_type = 'cpu'
+                    elif word == 'True':
+                        pu_type = 'gpu'
+                    elif word == 'test_small':
+                        data_type = 'small'
+                    elif word == 'test_many':
+                        data_type = 'large'
+
 
                 print(f'[_find_bench_proc] self._name: {self._name}')
                 print(f'[_find_bench_proc] self._async_proc_info.name(): {self._async_proc_info.name()}')
                 print(f'[_find_bench_proc] self._async_proc_info.cmdline(): {self._async_proc_info.cmdline()}')
                 print(f'[_find_bench_proc] exec_name: {exec_name}')
 
-                full_exec_name = model + '-' + exec_name
+                #full_exec_name = model + '-' + exec_name
+                full_exec_name = exec_name + '-' + model + '-' + pu_type + '-' + data_type
                 print(f'self._name: {self._name}')
+                print(f'full_exec_name: {full_exec_name}')
                 if self._name == full_exec_name and self._async_proc_info.is_running():
                     return self._async_proc_info
         except (IndexError, UnboundLocalError) as ex:
@@ -78,10 +89,10 @@ class SSDDriver(BenchDriver):
         #    model = 'inception_v3'
 
         if op_type == 'eval' and pu_type == 'cpu':
-            cmd = f'python {self._bench_home}/ssd-eval.py --cuda FALSE --set_type {data_type}'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda False --set_type {data_type}'
         elif op_type == 'eval' and pu_type == 'gpu':
-            cmd = f'python {self._bench_home}/ssd-eval.py --cuda TRUE --set_type {data_type}'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda True --set_type {data_type}'
         elif op_type == 'train' and pu_type == 'gpu':
-            cmd = f'python {self._bench_home}/ssd-train.py --cuda TRUE --batch_size 2'
+            cmd = f'python {self._bench_home}/ssd-train.py --cuda True --batch_size 2'
 
         return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.DEVNULL)
