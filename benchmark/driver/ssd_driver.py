@@ -59,6 +59,10 @@ class SSDDriver(BenchDriver):
         pu_type = splitted_name[3]  # pu_type : processing unit (e.g., cpu or gpu)
         if op_type == "eval":
             data_type = splitted_name[4]    # data_type : input data type (e.g., test_small or test_many)
+            if "small" in data_type:
+                data_type = "test_small"
+            elif "large" in data_type:
+                data_type = "test_many"
         else:
             data_type = None
         #print(f'splitted_name: {splitted_name}')
