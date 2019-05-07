@@ -103,6 +103,9 @@ class Benchmark:
         metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
         metric_logger.setLevel(logger_level)
 
+        bench_output_logger = logging.getLogger(f'{self._identifier}-bench_output')
+        bench_output_logger.setLevel(logger_level)
+
     @_Decorators.ensure_not_running
     async def start_and_pause(self, print_log: bool = False):
         self._remove_logger_handlers()
