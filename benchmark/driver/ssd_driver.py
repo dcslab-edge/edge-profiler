@@ -8,12 +8,12 @@ import psutil
 from benchmark.driver.base_driver import BenchDriver
 
 
-class PyTorchDriver(BenchDriver):
-    _benches: Set[str] = {'alexnet-train-gpu', 'alexnet-eval-cpu', 'alexnet-eval-gpu',
-                          'vgg11-train-gpu', 'vgg11-eval-cpu',
-                          'inceptionv3-train-gpu', 'inceptionv3-eval-cpu', 'inceptionv3-eval-gpu',
-                          'resnet152-train-gpu', 'resnet152-eval-cpu'}
-    bench_name: str = 'pytorch'
+class SSDDriver(BenchDriver):
+    """
+    SSD: Single Shot MultiBox Detection (Object Detection)
+    """
+    _benches: Set[str] = {'a','a'}
+    bench_name: str = 'ssd'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
     model = None
     op_type = None
@@ -21,7 +21,7 @@ class PyTorchDriver(BenchDriver):
 
     @staticmethod
     def has(bench_name: str) -> bool:
-        return bench_name in PyTorchDriver._benches
+        return bench_name in SSDDriver._benches
 
     def _find_bench_proc(self) -> Optional[psutil.Process]:
 
@@ -33,18 +33,14 @@ class PyTorchDriver(BenchDriver):
                 cmdline_list = exec_cmdline.split('/')
                 exec_name = cmdline_list[len(cmdline_list)-1].rstrip('.py')
                 model = ''
-                for word in cmdline:
-                    if word == 'alexnet' or word == 'vgg11' or word == 'resnet152':
-                        model = word
-                    elif word == 'inception_v3' or word == 'inceptionv3':
-                        model = word
+                #for word in cmdline:
+                #    if word == '':
 
-                """
                 print(f'[_find_bench_proc] self._name: {self._name}')
                 print(f'[_find_bench_proc] self._async_proc_info.name(): {self._async_proc_info.name()}')
                 print(f'[_find_bench_proc] self._async_proc_info.cmdline(): {self._async_proc_info.cmdline()}')
                 print(f'[_find_bench_proc] exec_name: {exec_name}')
-                """
+
 
                 full_exec_name = model + '-' + exec_name
                 #print(f'self._name: {self._name}')
@@ -52,7 +48,7 @@ class PyTorchDriver(BenchDriver):
                     return self._async_proc_info
         except (IndexError, UnboundLocalError) as ex:
             #print(f'{model}-{exec_name} is finished')
-            print(f'Inception v3 finished!')
+            #print(f'Inception v3 finished!')
             print(f'self._async_proc_info: {self._async_proc_info}')
             print(f'self._async_proc_info.is_running(): {self._async_proc_info.is_running()}')
             return self._async_proc_info
@@ -70,13 +66,13 @@ class PyTorchDriver(BenchDriver):
         print(f'pu_type: {pu_type}')
         print(f'batch_size: {self._batch_size}')
 
-        if op_type == 'eval' and model == 'inceptionv3':
-            model = 'inceptionv3'
-        elif op_type == 'train' and model == 'inceptionv3':
-            model = 'inception_v3'
+        #if op_type == 'eval' and model == 'inceptionv3':
+        #    model = 'inceptionv3'
+        #elif op_type == 'train' and model == 'inceptionv3':
+        #    model = 'inception_v3'
 
         if op_type == 'eval' and pu_type == 'cpu':
-            cmd = f'python {self._bench_home}/eval-cpu.py --data /ssd/raw_data -a {model} -b {self._batch_size} -e'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda FALSE'
         elif op_type == 'eval' and pu_type == 'gpu':
             cmd = f'python {self._bench_home}/eval-gpu.py --data /ssd/raw_data -a {model} -b {self._batch_size} -e'
         elif op_type == 'train' and pu_type == 'gpu':
