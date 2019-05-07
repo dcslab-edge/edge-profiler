@@ -12,12 +12,10 @@ class SSDDriver(BenchDriver):
     """
     SSD: Single Shot MultiBox Detection (Object Detection)
     """
-    _benches: Set[str] = {'a','a'}
+    _benches: Set[str] = {'ssd-eval-vgg-cpu-small', 'ssd-eval-vgg-cpu-large', 'ssd-eval-vgg-gpu-small',
+                          'ssd-eval-vgg-gpu-large', 'ssd-train-vgg-cpu', 'ssd-train-vgg-gpu'}
     bench_name: str = 'ssd'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
-    model = None
-    op_type = None
-    pu_type = None
 
     @staticmethod
     def has(bench_name: str) -> bool:
@@ -41,9 +39,8 @@ class SSDDriver(BenchDriver):
                 print(f'[_find_bench_proc] self._async_proc_info.cmdline(): {self._async_proc_info.cmdline()}')
                 print(f'[_find_bench_proc] exec_name: {exec_name}')
 
-
                 full_exec_name = model + '-' + exec_name
-                #print(f'self._name: {self._name}')
+                print(f'self._name: {self._name}')
                 if self._name == full_exec_name and self._async_proc_info.is_running():
                     return self._async_proc_info
         except (IndexError, UnboundLocalError) as ex:
@@ -57,13 +54,18 @@ class SSDDriver(BenchDriver):
         bench_name = self._name
         splitted_name = bench_name.split('-')
         #print(f'splitted_name: {splitted_name}')
-        model = splitted_name[0]    # model : alex or vgg
         op_type = splitted_name[1]  # op_type : eval or train
-        pu_type = splitted_name[2]  # pu_type : processing unit (e.g., cpu or gpu)
+        model = splitted_name[2]    # model : alex or vgg (default: vgg)
+        pu_type = splitted_name[3]  # pu_type : processing unit (e.g., cpu or gpu)
+        if op_type == "eval":
+            data_type = splitted_name[4]    # data_type : input data type (e.g., test_small or test_many)
+        else:
+            data_type = None
         #print(f'splitted_name: {splitted_name}')
         print(f'model: {model}')
         print(f'op_type: {op_type}')
         print(f'pu_type: {pu_type}')
+        print(f'data_type: {data_type}')
         print(f'batch_size: {self._batch_size}')
 
         #if op_type == 'eval' and model == 'inceptionv3':
@@ -72,10 +74,10 @@ class SSDDriver(BenchDriver):
         #    model = 'inception_v3'
 
         if op_type == 'eval' and pu_type == 'cpu':
-            cmd = f'python {self._bench_home}/ssd-eval.py --cuda FALSE'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda FALSE --set_type {data_type}'
         elif op_type == 'eval' and pu_type == 'gpu':
-            cmd = f'python {self._bench_home}/eval-gpu.py --data /ssd/raw_data -a {model} -b {self._batch_size} -e'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda TRUE --set_type {data_type}'
         elif op_type == 'train' and pu_type == 'gpu':
-            cmd = f'python {self._bench_home}/train-gpu.py -a {model} --lr 0.01 -b {self._batch_size} --epochs 1 /ssd/raw_data'
+            cmd = f'python {self._bench_home}/ssd-train.py --cuda TRUE --batch_size 2'
 
         return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.DEVNULL)
