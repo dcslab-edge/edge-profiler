@@ -249,6 +249,8 @@ class Benchmark:
                 # print bench_output_log header
                 fp.write('bench_output')
 
+            bench_output_logger.addHandler(logging.FileHandler(self._bench_output_log))
+
             while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None:
                 #record_line = []
                 ignore_flag = False
