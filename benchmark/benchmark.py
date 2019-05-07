@@ -253,7 +253,7 @@ class Benchmark:
                 #record_line = []
                 ignore_flag = False
 
-                raw_line = await self._bench_driver.async_proc.stdout.readline()
+                raw_line = await self._bench_driver.async_proc.stderr.readline()
                 #record_line.append(raw_line)
 
                 if not ignore_flag:
