@@ -346,6 +346,7 @@ class Benchmark:
     def _remove_logger_handlers(self):
         logger = logging.getLogger(self._identifier)
         metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
+        bench_output_logger = logging.getLogger(f'{self._identifier}-bench_output')
 
         for handler in tuple(metric_logger.handlers):  # type: Handler
             logger.debug(f'removing metric handler {handler}')
@@ -354,7 +355,16 @@ class Benchmark:
                 handler.flush()
                 handler.close()
             except:
-                logger.exception('Exception has happened while removing handler form metric logger.')
+                logger.exception('Exception has happened while removing handler from metric logger.')
+
+        for handler in tuple(bench_output_logger.handlers):  # type: Handler
+            logger.debug(f'removing bench_output handler {handler}')
+            bench_output_logger.removeHandler(handler)
+            try:
+                handler.flush()
+                handler.close()
+            except:
+                logger.exception('Exception has happened while removing handler from bench_output logger.')
 
         for handler in tuple(logger.handlers):  # type: Handler
             logger.removeHandler(handler)
