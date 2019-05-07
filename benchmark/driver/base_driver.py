@@ -112,6 +112,18 @@ class BenchDriver(metaclass=ABCMeta):
         return self._type
 
     @property
+    def bench_proc_info(self) -> Optional[psutil.Process]:
+        return self._bench_proc_info
+
+    @property
+    def async_proc(self) -> Optional[asyncio.subprocess.Process]:
+        return self._async_proc
+
+    @property
+    def async_proc_info(self) -> Optional[psutil.Process]:
+        return self._async_proc_info
+
+    @property
     @_Decorators.ensure_invoked
     def created_time(self) -> float:
         return self._bench_proc_info.create_time()

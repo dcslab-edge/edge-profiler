@@ -79,8 +79,15 @@ class Benchmark:
         if not perf_parent.exists():
             perf_parent.mkdir()
 
+        bench_output_parent = workspace / 'bench_output'
+        if not bench_output_parent.exists():
+            bench_output_parent.mkdir()
+
         # perf_csv contains both info of `perf` and `tegrastats`
         self._perf_csv: Path = perf_parent / f'{identifier}.csv'
+
+        # bench_output contains the output info of `bench_driver` (actual stdout from workload)
+        self._bench_output_log: Path = bench_output_parent / f'{identifier}.log'
 
         log_parent = workspace / 'logs'
         if not log_parent.exists():
@@ -159,6 +166,7 @@ class Benchmark:
                 rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names, None))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
+            # NOTE: Below rabbit_mq_handler is used to send the logs of metric_logger to rabbitmq
             metric_logger.addHandler(rabbit_mq_handler)
             #metric_logger.addHandler(node_mgr_mq_handler)
 
@@ -227,6 +235,41 @@ class Benchmark:
             logger.info('The benchmark is ended.')
             self._remove_logger_handlers()
             self._end_time = time.time()
+
+    @_Decorators.ensure_running
+    async def monitor_bench_output(self, print_bench_output_log: bool = False):
+        logger = logging.getLogger(self._identifier)
+
+        try:
+            bench_output_logger = logging.getLogger(f'{self._identifier}-bench_output')
+            if print_bench_output_log:
+                bench_output_logger.addHandler(logging.StreamHandler())
+
+            with self._bench_output_log.open('w') as fp:
+                # print bench_output_log header
+                fp.write('bench_output')
+
+            while self._bench_driver.is_running and self._bench_driver.bench_proc_info.returncode is None:
+                #record_line = []
+                ignore_flag = False
+
+                raw_line = await self._bench_driver.bench_proc_info.stdout.readline()
+                #record_line.append(raw_line)
+
+                if not ignore_flag:
+                    bench_output_logger.info(raw_line)
+
+            logger.info('end of monitoring bench_output loop')
+
+        except CancelledError as e:
+            logger.debug(f'The task cancelled : {e}')
+            self._stop()
+        finally:
+            try:
+                self._bench_driver.stop()
+            except (psutil.NoSuchProcess, ProcessLookupError):
+                pass
+
 
     @staticmethod
     def tegra_parser(tegrastatline):

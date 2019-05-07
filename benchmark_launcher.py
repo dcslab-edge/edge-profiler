@@ -256,7 +256,8 @@ def hyper_threading_guard(loop: asyncio.AbstractEventLoop, ht_flag):
 GLOBAL_CFG_PATH: Path = Path(__file__).resolve().parent / 'config.json'
 
 
-def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, print_metric_log: bool, verbose: bool):
+def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, print_metric_log: bool,
+           print_bench_output_log, verbose: bool):
     config_file = workspace / 'config.json'
     cur_node_type = MachineChecker.get_node_type()
 
@@ -341,6 +342,8 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
 
         for bench in benches:
             task: asyncio.Task = loop.create_task(bench.monitor(print_metric_log))
+            # FIXME: Adding asyncio for 'bench STDOUT' to event loop
+            task_for_bench_output: asyncio.Task = loop.create_task(bench.monitor_bench_output(print_bench_output_log))
             task.add_done_callback(store_runtime)
             task_map[task] = bench
 
@@ -374,6 +377,8 @@ def main():
                         help='Directory path where the config file (config.json) exist. (support wildcard *)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print more detail log')
     parser.add_argument('-L', '--print-log', action='store_true', help='Print all logs to stdout. (implies -M)')
+    parser.add_argument('-B', '--print-bench-output-log', action='store_true',
+                        help='Print all bench output related logs to stdout.')
     parser.add_argument('-M', '--print-metric-log', action='store_true',
                         help='Print all metric related logs to stdout.')
     args = parser.parse_args()
@@ -387,12 +392,13 @@ def main():
     loop = asyncio.get_event_loop()
     try:
         print_log = args.print_log
+        print_bench_output_log = args.print_bench_output_log
         print_metric_log = args.print_metric_log
         for i, workspace in enumerate(dirs):
             if i is not 0:
                 time.sleep(10)
 
-            if not launch(loop, Path(workspace), print_log, print_metric_log, args.verbose):
+            if not launch(loop, Path(workspace), print_log, print_metric_log, print_bench_output_log, args.verbose):
                 break
 
     finally:

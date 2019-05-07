@@ -41,12 +41,12 @@ class SSDDriver(BenchDriver):
                         data_type = 'small'
                     elif word == 'test_many':
                         data_type = 'large'
-
-
+                """        
                 print(f'[_find_bench_proc] self._name: {self._name}')
                 print(f'[_find_bench_proc] self._async_proc_info.name(): {self._async_proc_info.name()}')
                 print(f'[_find_bench_proc] self._async_proc_info.cmdline(): {self._async_proc_info.cmdline()}')
                 print(f'[_find_bench_proc] exec_name: {exec_name}')
+                """
 
                 #full_exec_name = model + '-' + exec_name
                 full_exec_name = exec_name + '-' + model + '-' + pu_type + '-' + data_type
@@ -55,8 +55,6 @@ class SSDDriver(BenchDriver):
                 if self._name == full_exec_name and self._async_proc_info.is_running():
                     return self._async_proc_info
         except (IndexError, UnboundLocalError) as ex:
-            #print(f'{model}-{exec_name} is finished')
-            #print(f'Inception v3 finished!')
             print(f'self._async_proc_info: {self._async_proc_info}')
             print(f'self._async_proc_info.is_running(): {self._async_proc_info.is_running()}')
             return self._async_proc_info
@@ -92,6 +90,8 @@ class SSDDriver(BenchDriver):
             cmd = f'python {self._bench_home}/ssd-eval.py --cuda False --set_type {data_type}'
         elif op_type == 'eval' and pu_type == 'gpu':
             cmd = f'python {self._bench_home}/ssd-eval.py --cuda True --set_type {data_type}'
+        elif op_type == 'train' and pu_type == 'cpu':
+            cmd = f'python {self._bench_home}/ssd-train.py --cuda False --batch_size 2'
         elif op_type == 'train' and pu_type == 'gpu':
             cmd = f'python {self._bench_home}/ssd-train.py --cuda True --batch_size 2'
 
