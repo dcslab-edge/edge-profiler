@@ -249,11 +249,11 @@ class Benchmark:
                 # print bench_output_log header
                 fp.write('bench_output')
 
-            while self._bench_driver.is_running and self._bench_driver.bench_proc_info.returncode is None:
+            while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None:
                 #record_line = []
                 ignore_flag = False
 
-                raw_line = await self._bench_driver.bench_proc_info.stdout.readline()
+                raw_line = await self._bench_driver.async_proc.stdout.readline()
                 #record_line.append(raw_line)
 
                 if not ignore_flag:
