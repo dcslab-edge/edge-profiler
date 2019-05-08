@@ -270,14 +270,14 @@ class Benchmark:
                 #ex) timer: 0.333 sec.
                 # FIXME: hard-coded for ssd driver
                 if "im_detect:" in line:
-                    # Eval per image
+                    # Eval: latency per image
                     splitted = line.split()
                     latency_seconds = splitted[2].rstrip('s')
                     ignore_flag = False
-                elif "timer:" in line:
-                    # Train per 10 iters
+                elif "time:" in line:
+                    # Train: latency per iter
                     splitted = line.split()
-                    latency_seconds = splitted[1]
+                    latency_seconds = splitted[5]
                     ignore_flag = False
                 else:
                     # IF "im_detect:" not in `line` and "timer:" not in `line`
