@@ -253,19 +253,26 @@ class Benchmark:
                 fp.write('bench_output\n')
 
             bench_output_logger.addHandler(logging.FileHandler(self._bench_output_log))
-
+            # FIXME: hard-coded for case of ssd driver
             while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None:
-                #record_line = []
+                latency_seconds = ''
                 ignore_flag = False
 
                 raw_line = await self._bench_driver.async_proc.stdout.readline()
                 line = raw_line.decode().strip()
-                #record_line.append(raw_line)
-                if line == '':
+
+                #ex) im_detect: 26/100 0.172s
+                # FIXME: hard-coded for ssd driver
+                if "im_detect:" in line:
+                    splitted = line.split()
+                    latency_seconds = splitted[2].rstrip('s')
+                    ignore_flag = False
+                else:
+                    # IF "im_detect:" not in `line`
                     ignore_flag = True
 
                 if not ignore_flag:
-                    bench_output_logger.info(line)
+                    bench_output_logger.info(latency_seconds)
 
             logger.info('end of monitoring bench_output loop')
 
