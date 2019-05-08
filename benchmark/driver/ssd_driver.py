@@ -95,4 +95,4 @@ class SSDDriver(BenchDriver):
         elif op_type == 'train' and pu_type == 'gpu':
             cmd = f'python {self._bench_home}/ssd-train.py --cuda True --batch_size 2'
 
-        return await self._cgroup.exec_command(cmd, stderr=asyncio.subprocess.PIPE)
+        return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.PIPE)

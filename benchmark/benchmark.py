@@ -250,7 +250,7 @@ class Benchmark:
 
             with self._bench_output_log.open('w') as fp:
                 # print bench_output_log header
-                fp.write('bench_output')
+                fp.write('bench_output\n')
 
             bench_output_logger.addHandler(logging.FileHandler(self._bench_output_log))
 
@@ -258,9 +258,11 @@ class Benchmark:
                 #record_line = []
                 ignore_flag = False
 
-                raw_line = await self._bench_driver.async_proc.stderr.readline()
+                raw_line = await self._bench_driver.async_proc.stdout.readline()
                 line = raw_line.decode().strip()
                 #record_line.append(raw_line)
+                if line == '':
+                    ignore_flag = True
 
                 if not ignore_flag:
                     bench_output_logger.info(line)
