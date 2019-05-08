@@ -217,10 +217,6 @@ class Benchmark:
 
             logger.info('end of monitoring loop')
 
-            self._kill_perf()
-            if self._node_type == NodeType.IntegratedGPU:
-                self._kill_tegra()
-
         except CancelledError as e:
             logger.debug(f'The task cancelled : {e}')
             self._stop()
@@ -255,23 +251,42 @@ class Benchmark:
             bench_output_logger.addHandler(logging.FileHandler(self._bench_output_log))
             # FIXME: hard-coded for case of ssd driver
             while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None:
+            #while self._bench_driver.is_running:
                 latency_seconds = ''
                 ignore_flag = False
-
+                """
+                bench_output_logger.info(f'self._bench_driver.is_running: {self._bench_driver.is_running}')
+                bench_output_logger.info(f'self._bench_driver.async_proc.returncode: '
+                                         f'{self._bench_driver.async_proc.returncode}')
+                bench_output_logger.info(f'self._bench_driver.async_proc_info.is_running: '
+                                         f'{self._bench_driver.async_proc_info.is_running}')
+                bench_output_logger.info(f'self._bench_driver.bench_proc_info.is_running: '
+                                         f'{self._bench_driver.bench_proc_info.is_running}')
+                """
                 raw_line = await self._bench_driver.async_proc.stdout.readline()
                 line = raw_line.decode().strip()
 
                 #ex) im_detect: 26/100 0.172s
+                #ex) timer: 0.333 sec.
                 # FIXME: hard-coded for ssd driver
                 if "im_detect:" in line:
+                    # Eval per image
                     splitted = line.split()
                     latency_seconds = splitted[2].rstrip('s')
                     ignore_flag = False
+                elif "timer:" in line:
+                    # Train per 10 iters
+                    splitted = line.split()
+                    latency_seconds = splitted[1]
+                    ignore_flag = False
                 else:
-                    # IF "im_detect:" not in `line`
+                    # IF "im_detect:" not in `line` and "timer:" not in `line`
                     ignore_flag = True
+                    if line is '':
+                        break
 
                 if not ignore_flag:
+                    #bench_output_logger.info(line)
                     bench_output_logger.info(latency_seconds)
 
             logger.info('end of monitoring bench_output loop')
@@ -280,13 +295,9 @@ class Benchmark:
             logger.debug(f'The task cancelled : {e}')
             self._stop()
         finally:
-            try:
-                self._bench_driver.stop()
-            except (psutil.NoSuchProcess, ProcessLookupError):
-                pass
-            logger.info('The benchmark is ended.')
+            logger.info('The benchmark output generation is ended.')
             self._remove_logger_handlers()
-            self._end_time = time.time()
+
 
     @staticmethod
     def tegra_parser(tegrastatline):
