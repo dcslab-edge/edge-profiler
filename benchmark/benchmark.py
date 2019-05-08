@@ -259,10 +259,11 @@ class Benchmark:
                 ignore_flag = False
 
                 raw_line = await self._bench_driver.async_proc.stderr.readline()
+                line = raw_line.decode().strip()
                 #record_line.append(raw_line)
 
                 if not ignore_flag:
-                    bench_output_logger.info(raw_line)
+                    bench_output_logger.info(line)
 
             logger.info('end of monitoring bench_output loop')
 
@@ -274,7 +275,9 @@ class Benchmark:
                 self._bench_driver.stop()
             except (psutil.NoSuchProcess, ProcessLookupError):
                 pass
-
+            logger.info('The benchmark is ended.')
+            self._remove_logger_handlers()
+            self._end_time = time.time()
 
     @staticmethod
     def tegra_parser(tegrastatline):
