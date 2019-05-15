@@ -14,6 +14,7 @@ class SSDDriver(BenchDriver):
     """
     _benches: Set[str] = {'ssd-eval-vgg-cpu-small', 'ssd-eval-vgg-cpu-medium', 'ssd-eval-vgg-cpu-large',
                           'ssd-eval-vgg-gpu-small', 'ssd-eval-vgg-gpu-medium', 'ssd-eval-vgg-gpu-large',
+                          'ssd-eval-vgg-gpu-original',
                           'ssd-train-vgg-cpu', 'ssd-train-vgg-gpu'}
     bench_name: str = 'ssd'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
@@ -21,20 +22,6 @@ class SSDDriver(BenchDriver):
     @staticmethod
     def has(bench_name: str) -> bool:
         return bench_name in SSDDriver._benches
-
-    """
-    def _get_data_type(self, word: str) -> str:
-        if word == 'False':
-            pu_type = 'cpu'
-        elif word == 'True':
-            pu_type = 'gpu'
-        elif word == 'test_small':
-            data_type = 'small'
-        elif word == 'test_medium':
-            data_type = 'medium'
-        elif word == 'test_large':
-            data_type = 'large'
-    """
 
     def _find_bench_proc(self) -> Optional[psutil.Process]:
 
@@ -60,6 +47,8 @@ class SSDDriver(BenchDriver):
                         data_type = 'medium'
                     elif word == 'test_large':
                         data_type = 'large'
+                    elif word == 'test_original':
+                        data_type = 'backup'
                     #elif word == 'test_large_medium':
                     #    data_type = 'large'
 
@@ -97,6 +86,8 @@ class SSDDriver(BenchDriver):
                 data_type = "test_medium"
             elif "large" in data_type:
                 data_type = "test_large"
+            elif "original" in data_type:
+                data_type = "test_backup"
         else:
             data_type = None
         #print(f'splitted_name: {splitted_name}')
@@ -109,7 +100,7 @@ class SSDDriver(BenchDriver):
         if op_type == 'eval' and pu_type == 'cpu':
             cmd = f'python {self._bench_home}/ssd-eval.py --cuda False --set_type {data_type}'
         elif op_type == 'eval' and pu_type == 'gpu':
-            cmd = f'python {self._bench_home}/ssd-eval.py --cuda True --set_type {data_type}'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda True --set_type {data_type}_200'
         elif op_type == 'train' and pu_type == 'cpu':
             cmd = f'python {self._bench_home}/ssd-train.py --cuda False --batch_size 2'
         elif op_type == 'train' and pu_type == 'gpu':
