@@ -14,7 +14,7 @@ class SSDDriver(BenchDriver):
     """
     _benches: Set[str] = {'ssd-eval-vgg-cpu-small', 'ssd-eval-vgg-cpu-medium', 'ssd-eval-vgg-cpu-large',
                           'ssd-eval-vgg-gpu-small', 'ssd-eval-vgg-gpu-medium', 'ssd-eval-vgg-gpu-large',
-                          'ssd-eval-vgg-gpu-original',
+                          'ssd-eval-vgg-gpu-original', 'ssd-eval-vgg-cpu-original',
                           'ssd-train-vgg-cpu', 'ssd-train-vgg-gpu'}
     bench_name: str = 'ssd'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
@@ -98,7 +98,7 @@ class SSDDriver(BenchDriver):
         print(f'batch_size: {self._batch_size}')
 
         if op_type == 'eval' and pu_type == 'cpu':
-            cmd = f'python {self._bench_home}/ssd-eval.py --cuda False --set_type {data_type}'
+            cmd = f'python {self._bench_home}/ssd-eval.py --cuda False --set_type {data_type}_15'
         elif op_type == 'eval' and pu_type == 'gpu':
             cmd = f'python {self._bench_home}/ssd-eval.py --cuda True --set_type {data_type}_200'
         elif op_type == 'train' and pu_type == 'cpu':
