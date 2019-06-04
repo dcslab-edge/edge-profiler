@@ -15,7 +15,7 @@ class SSDDriver(BenchDriver):
     _benches: Set[str] = {'ssd-eval-vgg-cpu-small', 'ssd-eval-vgg-cpu-medium', 'ssd-eval-vgg-cpu-large',
                           'ssd-eval-vgg-gpu-small', 'ssd-eval-vgg-gpu-medium', 'ssd-eval-vgg-gpu-large',
                           'ssd-eval-vgg-gpu-original', 'ssd-eval-vgg-cpu-original',
-                          'ssd-train-vgg-cpu', 'ssd-train-vgg-gpu'}
+                          'ssd-train-vgg-cpu', 'ssd-train-vgg-gpu', 'ssd-eval-vgg-gpu-dynamic'}
     bench_name: str = 'ssd'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
 
@@ -88,6 +88,8 @@ class SSDDriver(BenchDriver):
                 data_type = "test_large"
             elif "original" in data_type:
                 data_type = "test_backup"
+            elif "dynamic" in data_type:
+                data_type = "dynamic_load"
         else:
             data_type = None
         #print(f'splitted_name: {splitted_name}')
