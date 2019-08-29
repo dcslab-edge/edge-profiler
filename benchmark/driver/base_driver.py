@@ -60,8 +60,7 @@ class BenchDriver(metaclass=ABCMeta):
 
     def __init__(self, name: str, workload_type: str, identifier: str, binding_cores: str, num_threads: int = None,
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
-                 cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None,
-                 batch_size: int = None):
+                 cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None):
         self._name: str = name
         self._type: str = workload_type
         self._identifier: str = identifier
@@ -75,15 +74,13 @@ class BenchDriver(metaclass=ABCMeta):
         self._cpu_percent: Optional[float] = cpu_percent
         self._cbm_ranges: Optional[Union[str, List[str]]] = cbm_ranges
         self._gpu_freq: Optional[int] = gpu_freq
-        self._memory_limit: Optional[float] = memory_limit
-        self._batch_size: Optional[int] = batch_size
 
         self._bench_proc_info: Optional[psutil.Process] = None
         self._async_proc: Optional[asyncio.subprocess.Process] = None
         self._async_proc_info: Optional[psutil.Process] = None
 
         self._group_name = identifier
-        self._cgroup: Cgroup = Cgroup(identifier, 'cpuset,cpu,memory')
+        self._cgroup: Cgroup = Cgroup(identifier, 'cpuset,cpu')
         #self._resctrl_group: ResCtrl = ResCtrl()
 
     def __del__(self):
@@ -110,18 +107,6 @@ class BenchDriver(metaclass=ABCMeta):
     @property
     def wl_type(self) -> str:
         return self._type
-
-    @property
-    def bench_proc_info(self) -> Optional[psutil.Process]:
-        return self._bench_proc_info
-
-    @property
-    def async_proc(self) -> Optional[asyncio.subprocess.Process]:
-        return self._async_proc
-
-    @property
-    def async_proc_info(self) -> Optional[psutil.Process]:
-        return self._async_proc_info
 
     @property
     @_Decorators.ensure_invoked
@@ -181,9 +166,6 @@ class BenchDriver(metaclass=ABCMeta):
         print(f'self._cpu_percent: {self._cpu_percent}')
         if self._cpu_percent is not None:
             await self._cgroup.limit_cpu_quota(self._cpu_percent)
-        print(f'self._memory_limit: {self._memory_limit}')
-        if self._memory_limit is not None:
-            await self._cgroup.limit_memory_percent(self._memory_limit)
 
         self._async_proc = await self._launch_bench()
         self._async_proc_info = psutil.Process(self._async_proc.pid)
@@ -298,11 +280,15 @@ def find_driver(workload_name) -> Type[BenchDriver]:
         bench_drivers = (RodiniaDriver,)
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
-        from benchmark.driver.pytorch_driver import PyTorchDriver
-        from benchmark.driver.ssd_driver import SSDDriver
-        #bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
-        bench_drivers = (SparkGPUDriver, PyTorchDriver, SSDDriver)
+        from benchmark.driver.tail_driver import TailDriver
+        bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver, TailDriver)
+    # from benchmark.driver.spec_driver import SpecDriver
+    # from benchmark.driver.parsec_driver import ParsecDriver
+    # from benchmark.driver.rodinia_driver import RodiniaDriver
+    # from benchmark.driver.npb_driver import NPBDriver
+    # from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 
+    # bench_drivers = (SpecDriver, ParsecDriver, RodiniaDriver, NPBDriver)
     print(bench_drivers)
     for driver in bench_drivers:
         if driver.has(workload_name):
@@ -313,11 +299,10 @@ def find_driver(workload_name) -> Type[BenchDriver]:
 
 def bench_driver(workload_name: str, workload_type: str, identifier: str, binding_cores: str, num_threads: int = None,
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
-                 cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None,
-                 batch_size: int = None) \
+                 cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None) \
         -> BenchDriver:
     print("WORKLOAD: "+workload_name)
     _bench_driver = find_driver(workload_name)
 
     return _bench_driver(workload_name, workload_type, identifier, binding_cores, num_threads, numa_mem_nodes,
-                         cpu_freq, cpu_percent, cbm_ranges, gpu_freq, memory_limit, batch_size)
+                         cpu_freq, cpu_percent, cbm_ranges, gpu_freq)
