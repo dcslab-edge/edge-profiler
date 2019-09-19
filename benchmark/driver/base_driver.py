@@ -300,10 +300,12 @@ def find_driver(workload_name) -> Type[BenchDriver]:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 #        from benchmark.driver.pytorch_driver import PyTorchDriver
 #        from benchmark.driver.ssd_driver import SSDDriver
-        from benchmark.driver.tail_driver import TailDriver
+        #from benchmark.driver.tail_driver import TailDriver
+        from benchmark.driver.tail_integrated_driver import ITailDriver
         #bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
         #bench_drivers = (SparkGPUDriver, PyTorchDriver, SSDDriver, TailDriver)
-        bench_drivers = (SparkGPUDriver, TailDriver)
+        #bench_drivers = (SparkGPUDriver, TailDriver)
+        bench_drivers = (SparkGPUDriver, ITailDriver)
 
     print(bench_drivers)
     for driver in bench_drivers:
