@@ -276,3 +276,9 @@ result.txt
 # Pytorch Train
 checkpoint.pth.tar
 model_best.pth.tar
+
+# SSD
+ssd300_*
+
+# TailBench
+lats.bin

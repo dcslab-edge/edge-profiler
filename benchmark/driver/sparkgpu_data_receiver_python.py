@@ -8,6 +8,7 @@ import time
 from time import sleep
 import psutil
 
+from logging import Logger
 from benchmark.driver.base_driver import BenchDriver
 from subprocess import Popen
 
@@ -28,6 +29,9 @@ class SparkGPUDataReceiverPythonDriver(BenchDriver):
             return None
         else:
             return children[0]
+
+    async def process_bench_output(self, bench_output_logger: Logger) -> bool:
+        pass
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         data_stream_python_home = BenchDriver.get_bench_home('data-stream-python')

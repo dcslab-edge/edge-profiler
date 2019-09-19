@@ -4,7 +4,7 @@ import asyncio
 from typing import Optional, Set
 
 import psutil
-
+from logging import Logger
 from benchmark.driver.base_driver import BenchDriver
 
 
@@ -68,6 +68,43 @@ class SSDDriver(BenchDriver):
             print(f'self._async_proc_info: {self._async_proc_info}')
             print(f'self._async_proc_info.is_running(): {self._async_proc_info.is_running()}')
             return self._async_proc_info
+
+    async def process_bench_output(self, bench_output_logger: Logger) -> bool:
+        latency_seconds = ''
+        ignore_flag = False
+        """
+        bench_output_logger.info(f'self._bench_driver.is_running: {self._bench_driver.is_running}')
+        bench_output_logger.info(f'self._bench_driver.async_proc.returncode: '
+                                 f'{self._bench_driver.async_proc.returncode}')
+        bench_output_logger.info(f'make_output: '
+                                 f'{make_output}')
+        """
+        raw_line = await self.async_proc.stdout.readline()
+        line = raw_line.decode().strip()
+        #bench_output_logger.info(f'{line}')
+        #ex) im_detect: 26/100 0.172s
+        #ex) timer: 0.333 sec.
+        # FIXME: hard-coded for ssd driver
+        if "im_detect:" in line:
+            # Eval: latency per image
+            splitted = line.split()
+            latency_seconds = splitted[2].rstrip('s')
+            ignore_flag = False
+        elif "time:" in line:
+            # Train: latency per iter
+            splitted = line.split()
+            latency_seconds = splitted[5]
+            ignore_flag = False
+        else:
+            # IF "im_detect:" not in `line` and "timer:" not in `line`
+            ignore_flag = True
+            if line is '':
+                return True
+
+        if not ignore_flag:
+            bench_output_logger.info(latency_seconds)
+
+        return False
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         bench_name = self._name

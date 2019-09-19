@@ -4,7 +4,7 @@ import asyncio
 from typing import Optional, Set
 
 import psutil
-
+from logging import Logger
 from benchmark.driver.base_driver import BenchDriver
 
 
@@ -31,6 +31,9 @@ class Cifar10Driver(BenchDriver):
         """
         if self._name in exec_name and self._async_proc_info.is_running():
             return self._async_proc_info
+
+    async def process_bench_output(self, bench_output_logger: Logger) -> bool:
+        pass
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         if 'train' in self._name:

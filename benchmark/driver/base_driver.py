@@ -7,6 +7,7 @@ from abc import ABCMeta, abstractmethod
 from itertools import chain
 from signal import SIGCONT, SIGSTOP
 from typing import Any, Callable, Coroutine, Iterable, List, Optional, Set, Tuple, Type, Union
+from logging import Logger
 
 import psutil
 
@@ -169,6 +170,15 @@ class BenchDriver(metaclass=ABCMeta):
     def _find_bench_proc(self) -> Optional[psutil.Process]:
         pass
 
+    @abstractmethod
+    async def process_bench_output(self, bench_output_logger: Logger) -> bool:
+        """
+        This function deal with output from a driver (e.g., latency from latency-critical workload)
+        :param bench_output_logger: logger to write output generated from the bench
+        :return: Return `True` if it generates an output, Otherwise return `False`
+        """
+        pass
+
     @_Decorators.ensure_not_running
     async def run(self) -> None:
         self._bench_proc_info = None
@@ -299,13 +309,13 @@ def find_driver(workload_name) -> Type[BenchDriver]:
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
 #        from benchmark.driver.pytorch_driver import PyTorchDriver
-#        from benchmark.driver.ssd_driver import SSDDriver
+        from benchmark.driver.ssd_driver import SSDDriver
         #from benchmark.driver.tail_driver import TailDriver
         from benchmark.driver.tail_integrated_driver import ITailDriver
         #bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
         #bench_drivers = (SparkGPUDriver, PyTorchDriver, SSDDriver, TailDriver)
         #bench_drivers = (SparkGPUDriver, TailDriver)
-        bench_drivers = (SparkGPUDriver, ITailDriver)
+        bench_drivers = (SparkGPUDriver, ITailDriver, SSDDriver)
 
     print(bench_drivers)
     for driver in bench_drivers:

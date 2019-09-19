@@ -249,44 +249,16 @@ class Benchmark:
                 fp.write(f'[{self._bench_driver.bench_name}:{self._bench_driver.name}] bench_output\n')
 
             bench_output_logger.addHandler(logging.FileHandler(self._bench_output_log))
-            # FIXME: hard-coded for case of ssd driver
+
             make_output = False
-            if 'ssd' == self._bench_driver.bench_name:
+            # FIXME: Add condition for LC workloads to generate bench_output
+            if 'ssd' == self._bench_driver.bench_name or 'tail' in self._bench_driver.bench_name:
                 make_output = True
             while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None and make_output:
-                latency_seconds = ''
-                ignore_flag = False
-                """
-                bench_output_logger.info(f'self._bench_driver.is_running: {self._bench_driver.is_running}')
-                bench_output_logger.info(f'self._bench_driver.async_proc.returncode: '
-                                         f'{self._bench_driver.async_proc.returncode}')
-                bench_output_logger.info(f'make_output: '
-                                         f'{make_output}')
-                """
-                raw_line = await self._bench_driver.async_proc.stdout.readline()
-                line = raw_line.decode().strip()
-                #bench_output_logger.info(f'{line}')
-                #ex) im_detect: 26/100 0.172s
-                #ex) timer: 0.333 sec.
-                # FIXME: hard-coded for ssd driver
-                if "im_detect:" in line:
-                    # Eval: latency per image
-                    splitted = line.split()
-                    latency_seconds = splitted[2].rstrip('s')
-                    ignore_flag = False
-                elif "time:" in line:
-                    # Train: latency per iter
-                    splitted = line.split()
-                    latency_seconds = splitted[5]
-                    ignore_flag = False
-                else:
-                    # IF "im_detect:" not in `line` and "timer:" not in `line`
-                    ignore_flag = True
-                    if line is '':
-                        break
-
-                if not ignore_flag:
-                    bench_output_logger.info(latency_seconds)
+                ended = await self._bench_driver.process_bench_output(bench_output_logger)
+                logger.info(f'[monitor_bench_output] ended: {ended}')
+                if ended:
+                    break
 
             logger.info('end of monitoring bench_output loop')
 

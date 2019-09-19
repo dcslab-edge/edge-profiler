@@ -6,7 +6,7 @@ import shlex
 from typing import Optional, Set
 
 import psutil
-
+from logging import Logger
 from benchmark.driver.base_driver import BenchDriver
 
 
@@ -41,6 +41,9 @@ class SparkGPUDriver(BenchDriver):
             return None
         else:
             return children[0]
+
+    async def process_bench_output(self, bench_output_logger: Logger) -> bool:
+        pass
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         cmd = '{0}/bin/run-example {1}'.format(self._bench_home, self._name)
