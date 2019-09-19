@@ -1,0 +1,53 @@
+{
+  "perf": {
+    "interval": 200,
+    "events": [
+      {
+        "event": "r016",
+        "alias": "llc_references"
+      },
+      {
+        "event": "r017",
+        "alias": "llc_misses"
+      },
+      "instructions",
+      "cycles"
+    ]
+  },
+  "tegrastats":{
+    "interval": 200,
+    "events":[
+      {
+        "event": "gr3d",
+        "alias": "gpu_core_util"
+      },
+      {
+        "event": "gr3d_freq",
+        "alias": "gpu_core_freq"
+      },
+      {
+        "event": "emc",
+        "alias": "gpu_emc_util"
+      },
+      {
+        "event": "emc_freq",
+        "alias": "gpu_emc_freq"
+      }
+    ]
+  },
+  "rabbitMQ": {
+    "host": "jetson1",
+    "exchange_name": {
+      "workload_creation": "workload_creation"
+    }
+  },
+  "benchmark": {
+    "sparkgpu": "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/GPUEnabler",
+    "data-stream-python" : "/home/nvidia/dcslab/benchmarks/data-stream-python",
+    "data-stream-scala" : "/home/nvidia/dcslab/benchmarks/data-stream-scala",
+    "spark-submit" : "/home/nvidia/dcslab/benchmarks/edge-sparkgpu/SparkGPU",
+    "stream-ip-address" : "147.46.114.145",
+    "pytorch" : "/ssd/test",
+    "ssd" : "/ssd/ssd.pytorch"
+  }
+}
