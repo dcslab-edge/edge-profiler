@@ -62,7 +62,7 @@ class BenchDriver(metaclass=ABCMeta):
     def __init__(self, name: str, workload_type: str, identifier: str, binding_cores: str, num_threads: int = None,
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
                  cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None,
-                 batch_size: int = None):
+                 batch_size: int = None, diff_slack: float = None):
         self._name: str = name
         self._type: str = workload_type
         self._identifier: str = identifier
@@ -78,6 +78,7 @@ class BenchDriver(metaclass=ABCMeta):
         self._gpu_freq: Optional[int] = gpu_freq
         self._memory_limit: Optional[float] = memory_limit
         self._batch_size: Optional[int] = batch_size
+        self._diff_slack: Optional[float] = diff_slack
 
         self._bench_proc_info: Optional[psutil.Process] = None
         self._async_proc: Optional[asyncio.subprocess.Process] = None
@@ -111,6 +112,10 @@ class BenchDriver(metaclass=ABCMeta):
     @property
     def wl_type(self) -> str:
         return self._type
+
+    @property
+    def diff_slack(self) -> float:
+        return self._diff_slack
 
     @property
     def bench_proc_info(self) -> Optional[psutil.Process]:
@@ -328,10 +333,10 @@ def find_driver(workload_name) -> Type[BenchDriver]:
 def bench_driver(workload_name: str, workload_type: str, identifier: str, binding_cores: str, num_threads: int = None,
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
                  cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None,
-                 batch_size: int = None) \
+                 batch_size: int = None, diff_slack: float = None) \
         -> BenchDriver:
     print("WORKLOAD: "+workload_name)
     _bench_driver = find_driver(workload_name)
 
     return _bench_driver(workload_name, workload_type, identifier, binding_cores, num_threads, numa_mem_nodes,
-                         cpu_freq, cpu_percent, cbm_ranges, gpu_freq, memory_limit, batch_size)
+                         cpu_freq, cpu_percent, cbm_ranges, gpu_freq, memory_limit, batch_size, diff_slack)

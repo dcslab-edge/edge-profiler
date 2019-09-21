@@ -155,17 +155,17 @@ class Benchmark:
             if self._node_type == NodeType.IntegratedGPU:
                 rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                                                     self._bench_driver.wl_type, self._bench_driver.pid,
-                                                    self._perf.pid, self._perf_config.interval,
-                                                    self._tegra.pid, self._tegra_config.interval,
-                                                    self._max_benches)
+                                                    self._bench_driver.diff_slack, self._perf.pid,
+                                                    self._perf_config.interval, self._tegra.pid,
+                                                    self._tegra_config.interval, self._max_benches)
                 rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names,
                                                                  self._tegra_config.event_names))
 
             elif self._node_type == NodeType.CPU:
                 rabbit_mq_handler = RabbitMQHandler(self._rabbit_mq_config, self._bench_driver.name,
                                                     self._bench_driver.wl_type, self._bench_driver.pid,
-                                                    self._perf.pid, self._perf_config.interval, None, None,
-                                                    self._max_benches)
+                                                    self._bench_driver.diff_slack, self._perf.pid,
+                                                    self._perf_config.interval, None, None, self._max_benches)
                 rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names, None))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
@@ -401,8 +401,8 @@ class Benchmark:
 
 class RabbitMQHandler(Handler):
     def __init__(self, rabbit_mq_config: RabbitMQConfig, bench_name: str, bench_type: str, bench_pid: int,
-                 perf_pid: int, perf_interval: int, tegra_pid: Optional[int], tegra_interval: Optional[int],
-                 max_benches: int):
+                 bench_diff_slack: float, perf_pid: int, perf_interval: int, tegra_pid: Optional[int],
+                 tegra_interval: Optional[int], max_benches: int):
         super().__init__()
         # TODO: upgrade to async version
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=rabbit_mq_config.host_name))
@@ -418,7 +418,7 @@ class RabbitMQHandler(Handler):
         self._creation_exchange_name: str = f'{rabbit_mq_config.creation_exchange_name}({rabbit_mq_config.host_name})'
         self._channel.exchange_declare(exchange=self._creation_exchange_name, exchange_type='fanout')
         self._channel.basic_publish(exchange=self._creation_exchange_name, routing_key='',
-                body=f'{bench_name},{bench_type},{bench_pid},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval},{max_benches}')
+            body=f'{bench_name},{bench_type},{bench_pid},{bench_diff_slack},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval},{max_benches}')
 
     def emit(self,record: LogRecord):
         formatted: str = self.format(record)
