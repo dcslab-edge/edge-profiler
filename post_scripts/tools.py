@@ -14,10 +14,11 @@ from containers.rabbit_mq_config import RabbitMQConfig
 
 
 class WorkloadResult:
-    def __init__(self, name: str, runtime: float, metrics: OrderedDict):
+    def __init__(self, name: str, runtime: float, metrics: OrderedDict, bench_output: List[float]):
         self._name: str = name
         self._runtime: float = runtime
         self._metrics: OrderedDict = metrics
+        self._bench_output: List[float] = bench_output
 
     @property
     def runtime(self):
@@ -31,12 +32,17 @@ class WorkloadResult:
     def name(self):
         return self._name
 
+    @property
+    def bench_output(self):
+        return self._bench_output
+
 
 def read_result(workspace: Path) -> List[WorkloadResult]:
     result_file = workspace / 'result.json'
     metric_path = workspace / 'perf'
+    bench_output_path = workspace / 'bench_output'
 
-    if not result_file.is_file() or not metric_path.is_dir():
+    if not result_file.is_file() or not metric_path.is_dir() or not bench_output_path.is_dir():
         raise ValueError('run benchmark_launcher.py first!')
 
     with result_file.open() as result_fp:
@@ -46,6 +52,7 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
 
     for workload_name, runtime in result['runtime'].items():  # type: str, float
         metric_map = OrderedDict()
+        bench_output_results = []
 
         with (metric_path / f'{workload_name}.csv').open() as metric_fp:
             reader = csv.DictReader(metric_fp)
@@ -57,7 +64,18 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                 for k, v in row.items():  # type: str, str
                     metric_map[k].append(float(v))
 
-        ret.append(WorkloadResult(workload_name, runtime, metric_map))
+        with (bench_output_path / f'{workload_name}.log').open() as bench_output_fp:
+            num_line = 1
+            for line in bench_output_fp.readlines():
+                #line = bench_output_fp.readline().rstrip('\n')
+                if line == "":
+                    break
+                if num_line >= 2:
+                    #print(f'line:{line}, type:{type(line)}')
+                    bench_output_results.append(float(line))
+                num_line += 1
+        print(bench_output_results)
+        ret.append(WorkloadResult(workload_name, runtime, metric_map, bench_output_results))
 
     return ret
 
