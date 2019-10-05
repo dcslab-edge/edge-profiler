@@ -42,7 +42,7 @@ class ITailDriver(BenchDriver):
                                  f'{make_output}')
         """
         raw_line = await self.async_proc.stdout.readline()
-        line = raw_line.decode().strip()
+        line = raw_line.decode().strip().rstrip('\n')
         # bench_output_logger.info(f'{line}')
         #ex) im_detect: 26/100 0.172s
         #ex) timer: 0.333 sec.
