@@ -70,7 +70,7 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                 #line = bench_output_fp.readline().rstrip('\n')
                 if line == "":
                     break
-                if num_line >= 2:
+                if num_line >= 2 and "times" not in line:
                     #print(f'line:{line}, type:{type(line)}')
                     if ',' in line:
                         # FIXME: hard-coded for tailbench
@@ -78,9 +78,10 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                         #print(f'line:{line}, type:{type(line)}')
                         bench_output_results.append((float(line[2])))
                     else:
-                        bench_output_results.append(float(line))
+                        if ' ' not in line:
+                            bench_output_results.append(float(line))
                 num_line += 1
-        print(bench_output_results)
+        #print(bench_output_results)
         ret.append(WorkloadResult(workload_name, runtime, metric_map, bench_output_results))
 
     return ret

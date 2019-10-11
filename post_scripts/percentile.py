@@ -29,11 +29,11 @@ def run(workspace: Path, global_cfg_path: Path):
     #FIXME: NEED TO FIX
     for workload_result in results:
         latency_data = workload_result.bench_output
-        print(f'{workload_result.name}, latency_data: {latency_data}')
+        #print(f'{workload_result.name}, latency_data: {latency_data}')
         sorted_lat: List[float] = sorted(latency_data, reverse=True)    # sorting requests in descending order
         total_reqs = len(latency_data)  # e.g., 200 for ssd_eval
         # Counting index for latency_reqs and find latency data according to the percentiles
-        print(f'{workload_result.name}, sorted_lat: {sorted_lat}')
+        #print(f'{workload_result.name}, sorted_lat: {sorted_lat}')
         for perc in percentiles:
             req_lat_idx = int(total_reqs*(float(1-perc)))
             k = '{}p'.format(int(perc*100))

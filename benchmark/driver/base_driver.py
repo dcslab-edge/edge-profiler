@@ -307,20 +307,15 @@ class BenchDriver(metaclass=ABCMeta):
 
 def find_driver(workload_name) -> Type[BenchDriver]:
     node_type = MachineChecker.get_node_type()
-    from benchmark.driver.sparkgpu_data_receiver_python import SparkGPUDataReceiverPythonDriver
     if node_type == NodeType.CPU:
         from benchmark.driver.rodinia_driver import RodiniaDriver
         bench_drivers = (RodiniaDriver,)
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
-#        from benchmark.driver.pytorch_driver import PyTorchDriver
         from benchmark.driver.ssd_driver import SSDDriver
-        #from benchmark.driver.tail_driver import TailDriver
         from benchmark.driver.tail_integrated_driver import ITailDriver
-        #bench_drivers = (SparkGPUDriver, SparkGPUDataReceiverPythonDriver)
-        #bench_drivers = (SparkGPUDriver, PyTorchDriver, SSDDriver, TailDriver)
-        #bench_drivers = (SparkGPUDriver, TailDriver)
-        bench_drivers = (SparkGPUDriver, ITailDriver, SSDDriver)
+        from benchmark.driver.tail_networkd_driver import NTailDriver
+        bench_drivers = (SparkGPUDriver, ITailDriver, NTailDriver, SSDDriver)
 
     print(bench_drivers)
     for driver in bench_drivers:

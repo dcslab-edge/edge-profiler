@@ -10,8 +10,8 @@ from benchmark.driver.base_driver import BenchDriver
 
 class ITailDriver(BenchDriver):
     
-    _benches: Set[str] = {'tail-img-dnn', 'tail-masstree', 'tail-silo', 'tail-sphinx',
-                          'tail-xapian', 'tail-moses', 'tail-shore', 'tail-specjbb'}
+    _benches: Set[str] = {'itail-img-dnn', 'itail-masstree', 'itail-silo', 'itail-sphinx',
+                          'itail-xapian', 'itail-moses', 'itail-shore', 'itail-specjbb'}
     bench_name: str = 'tail'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
 
@@ -28,6 +28,7 @@ class ITailDriver(BenchDriver):
         for process in self._async_proc_info.children(recursive=True):
             print(f'[_find_bench_proc] process.name(): {process.name()}')
             if process.name() == exec_name and process.is_running():
+                print(f'[_find_bench_proc] process: {process}')
                 return process
 
         return None
@@ -56,7 +57,6 @@ class ITailDriver(BenchDriver):
             bench_output_logger.info(latency_seconds)
             ignore_flag = False
         else:
-            # IF "im_detect:" not in `line` and "timer:" not in `line`
             ignore_flag = True
             if line == 'end of tail bench':
                 return True
@@ -69,7 +69,7 @@ class ITailDriver(BenchDriver):
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         bench_name = self._name
         print(f'bench_name: {bench_name}')
-        bench_name = bench_name.lstrip('tail').lstrip('-')
+        bench_name = bench_name.lstrip('itail').lstrip('-')
         print(f'bench_name: {bench_name}')
 
         # FIXME: TBENCH_RANDSEED random generate
@@ -83,5 +83,7 @@ class ITailDriver(BenchDriver):
         elif bench_name == 'xapian':
             cmd = f'{self._bench_home}/{bench_name}/run.sh TBENCH_RANDSEED=3'
 
-        return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.PIPE)
+        ret = await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.PIPE)
+        return ret
+        #return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.PIPE)
         # return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.DEVNULL)

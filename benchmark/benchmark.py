@@ -137,10 +137,14 @@ class Benchmark:
                 
         try:
             # launching perf
+            logger.info(f'self._bench_driver.pid: {self._bench_driver.pid}')
+            logger.info(f'self._bench_driver.is_running: {self._bench_driver.is_running}')
+            logger.info(f'self._perf_config: {self._perf_config.event_str}')
             self._perf = await asyncio.create_subprocess_exec(
                     'perf', 'stat', '-e', self._perf_config.event_str,
                     '-p', str(self._bench_driver.pid), '-x', ',', '-I', str(self._perf_config.interval),
                     stderr=asyncio.subprocess.PIPE)
+            logger.info(f'self._perf: {self._perf}')
 
             # launching tegrastats
             # tegrastats uses stdout for printing
@@ -184,13 +188,19 @@ class Benchmark:
                 elif self._node_type == NodeType.CPU:
                     fp.write('\n')
 
+            logger.info(f'[monitor] open file handler')
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
 
+            logger.info(f'[monitor] enter perf polling..')
             # perf polling loop
 
             num_of_events = len(self._perf_config.events)
+            logger.info(f'[monitor] num_of_events: {num_of_events}')
+            logger.info(f'[monitor] self._perf: {self._perf}, self._perf.returncode: {self._perf.returncode}')
             # TODO: Perf Ver. can be a problem (ref. to benchmark_copy.py)
+            logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
             while self._bench_driver.is_running and self._perf.returncode is None:
+                logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
                 record = []
                 ignore_flag = False
 
@@ -254,9 +264,12 @@ class Benchmark:
             # FIXME: Add condition for LC workloads to generate bench_output
             if 'ssd' == self._bench_driver.bench_name or 'tail' in self._bench_driver.bench_name:
                 make_output = True
+            logger.info(f'[monitor_bench_output] self._bench_driver.is_running: {self._bench_driver.is_running}')
+            logger.info(f'[monitor_bench_output] self._bench_driver.async_proc.returncode: {self._bench_driver.async_proc.returncode}')
+            logger.info(f'[monitor_bench_output] make_output: {make_output}')
             while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None and make_output:
                 ended = await self._bench_driver.process_bench_output(bench_output_logger)
-                logger.info(f'[monitor_bench_output] ended: {ended}')
+                #logger.info(f'[monitor_bench_output] ended: {ended}')
                 if ended:
                     break
 
