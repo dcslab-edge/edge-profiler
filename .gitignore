@@ -282,3 +282,4 @@ ssd300_*
 
 # TailBench
 lats.bin
+server.pid

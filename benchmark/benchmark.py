@@ -108,7 +108,7 @@ class Benchmark:
 
     @_Decorators.ensure_not_running
     async def start_and_pause(self, print_log: bool = False):
-        self._remove_logger_handlers()
+        self._remove_logger_handlers('all')
 
         # setup for loggers
 
@@ -195,12 +195,11 @@ class Benchmark:
             # perf polling loop
 
             num_of_events = len(self._perf_config.events)
-            logger.info(f'[monitor] num_of_events: {num_of_events}')
             logger.info(f'[monitor] self._perf: {self._perf}, self._perf.returncode: {self._perf.returncode}')
             # TODO: Perf Ver. can be a problem (ref. to benchmark_copy.py)
             logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
             while self._bench_driver.is_running and self._perf.returncode is None:
-                logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
+                #logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
                 record = []
                 ignore_flag = False
 
@@ -242,7 +241,7 @@ class Benchmark:
 
             await self._bench_driver.cleanup()
             logger.info('The benchmark is ended.')
-            self._remove_logger_handlers()
+            self._remove_logger_handlers('metric')
             self._end_time = time.time()
 
     @_Decorators.ensure_running
@@ -269,7 +268,7 @@ class Benchmark:
             logger.info(f'[monitor_bench_output] make_output: {make_output}')
             while self._bench_driver.is_running and self._bench_driver.async_proc.returncode is None and make_output:
                 ended = await self._bench_driver.process_bench_output(bench_output_logger)
-                #logger.info(f'[monitor_bench_output] ended: {ended}')
+                logger.info(f'[monitor_bench_output] ended: {ended}')
                 if ended:
                     break
 
@@ -280,7 +279,7 @@ class Benchmark:
             self._stop()
         finally:
             logger.info('The benchmark output generation is ended.')
-            self._remove_logger_handlers()
+            self._remove_logger_handlers('bench_output')
 
 
     @staticmethod
@@ -350,28 +349,29 @@ class Benchmark:
         except (psutil.NoSuchProcess, ProcessLookupError) as e:
             logger.debug(f'Process already killed : {e}')
 
-    def _remove_logger_handlers(self):
+    def _remove_logger_handlers(self, target: str):
         logger = logging.getLogger(self._identifier)
         metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
         bench_output_logger = logging.getLogger(f'{self._identifier}-bench_output')
+        if target == 'metric' or 'all':
+            for handler in tuple(metric_logger.handlers):  # type: Handler
+                logger.debug(f'removing metric handler {handler}')
+                metric_logger.removeHandler(handler)
+                try:
+                    handler.flush()
+                    handler.close()
+                except:
+                    logger.exception('Exception has happened while removing handler from metric logger.')
 
-        for handler in tuple(metric_logger.handlers):  # type: Handler
-            logger.debug(f'removing metric handler {handler}')
-            metric_logger.removeHandler(handler)
-            try:
-                handler.flush()
-                handler.close()
-            except:
-                logger.exception('Exception has happened while removing handler from metric logger.')
-
-        for handler in tuple(bench_output_logger.handlers):  # type: Handler
-            logger.debug(f'removing bench_output handler {handler}')
-            bench_output_logger.removeHandler(handler)
-            try:
-                handler.flush()
-                handler.close()
-            except:
-                logger.exception('Exception has happened while removing handler from bench_output logger.')
+        if target == 'bench_output' or 'all':
+            for handler in tuple(bench_output_logger.handlers):  # type: Handler
+                logger.debug(f'removing bench_output handler {handler}')
+                bench_output_logger.removeHandler(handler)
+                try:
+                    handler.flush()
+                    handler.close()
+                except:
+                    logger.exception('Exception has happened while removing handler from bench_output logger.')
 
         for handler in tuple(logger.handlers):  # type: Handler
             logger.removeHandler(handler)

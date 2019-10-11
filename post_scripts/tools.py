@@ -66,19 +66,20 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
 
         with (bench_output_path / f'{workload_name}.log').open() as bench_output_fp:
             num_line = 1
+            lat_flag = False
             for line in bench_output_fp.readlines():
                 #line = bench_output_fp.readline().rstrip('\n')
                 if line == "":
                     break
-                if num_line >= 2 and "times" not in line:
-                    #print(f'line:{line}, type:{type(line)}')
-                    if ',' in line:
+                if num_line >= 2:
+                    if "times" in line or 'ssd' in workload_name:
+                        lat_flag = True
+                    elif ',' in line and lat_flag: #
                         # FIXME: hard-coded for tailbench
                         line = line.rstrip('\n').split(",")
-                        #print(f'line:{line}, type:{type(line)}')
                         bench_output_results.append((float(line[2])))
-                    else:
-                        if ' ' not in line:
+                    else:   # ssd case
+                        if lat_flag:
                             bench_output_results.append(float(line))
                 num_line += 1
         #print(bench_output_results)

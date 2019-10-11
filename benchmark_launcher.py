@@ -284,7 +284,9 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
         rabbit_cfg = parse_rabbit_mq_cfg(global_cfg_source['rabbitMQ'])
         launcher_cfg = parse_launcher_cfg(local_cfg_source.get('launcher'))
 
-    task_map: Dict[asyncio.Task, Benchmark] = dict()
+    task_map: Dict[Tuple[asyncio.Task], Benchmark] = dict()
+    wait_atask_list: List[asyncio.Task] = list()
+    #task_map: Dict[asyncio.Task, Benchmark] = dict()
 
     was_successful = True
 
@@ -295,15 +297,21 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
     def stop_all():
         print('force stop all tasks...', file=sys.stderr)
 
-        for a_task in task_map:
-            if not a_task.done():
-                a_task.cancel()
+        for a_tasks in task_map:
+            for a_task in a_tasks:
+                if not a_task.done():
+                    a_task.cancel()
 
         nonlocal was_successful
         was_successful = False
 
     def store_runtime(a_task: asyncio.Task):
-        a_bench = task_map[a_task]
+        a_bench = None
+        for atasks_tuple, bench in task_map.items():
+            if a_task in atasks_tuple:
+                a_bench = bench
+
+        #a_bench = task_map[a_task]
 
         if result_file.exists():
             with result_file.open('r+') as fp:
@@ -346,12 +354,21 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
             # FIXME: Adding asyncio for 'bench STDOUT' to event loop
             task_for_bench_output: asyncio.Task = loop.create_task(bench.monitor_bench_output(print_bench_output_log))
             task.add_done_callback(store_runtime)
-            task_map[task] = bench
+            a_tasks = tuple([task, task_for_bench_output])
+            task_map[a_tasks] = bench
+
+        a_tasks_list = task_map.keys()
+        for a_tasks in a_tasks_list:
+            for a_task in a_tasks:
+                wait_atask_list.append(a_task)
+
+        print(f'wait_atask_list : {wait_atask_list}')
 
         # start monitoring
         return_when = asyncio.FIRST_COMPLETED if launcher_cfg.stops_with_the_first else asyncio.ALL_COMPLETED
-        finished, unfinished = loop.run_until_complete(asyncio.wait(task_map.keys(), return_when=return_when))
+        finished, unfinished = loop.run_until_complete(asyncio.wait(wait_atask_list, return_when=return_when))
 
+        print(f'unfinished: {unfinished}')
         for task in unfinished:
             task.cancel()
 
