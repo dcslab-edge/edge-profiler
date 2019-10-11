@@ -20,16 +20,8 @@ class NTailDriver(BenchDriver):
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
     workload_name = None
     server_proc = None
-    client_proc = None          # for client connected via ssh
-    client_proc_stdout = None   # for client stdout
-    client_proc_stderr = None   # for client stderr
-    channel = None
-
-    stdin = None    # used for sending commands
-    stdout = None   # used for receiving results
 
     reader = None    # session used for receiving results by using AsyncSSH
-    session = None   # session used for receiving results by using AsyncSSH
 
     # FIXME: hard-coded
     server_input_path = '/ssd/tailbench/tailbench.inputs'
