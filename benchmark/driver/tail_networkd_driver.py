@@ -2,14 +2,12 @@
 
 import asyncio
 import asyncssh
-from typing import Optional, Set
+from typing import Optional, Set, Dict
 
 import psutil
 import logging
 from benchmark.driver.base_driver import BenchDriver
 import time
-import paramiko
-import socket
 
 
 class NTailDriver(BenchDriver):
@@ -24,21 +22,23 @@ class NTailDriver(BenchDriver):
     reader = None    # session used for receiving results by using AsyncSSH
 
     # FIXME: hard-coded
+    server_base_path = '/ssd/tailbench/tailbench-v0.9'
+    client_base_path = '/ssd2/tailbench/tailbench'
     server_input_path = '/ssd/tailbench/tailbench.inputs'
     client_input_path = '/ssd2/tailbench/tailbench.inputs'
     # TODO: DATA_MAPS currently works on img-dnn only
     SERVER_DATA_MAPS = {
         "img-dnn": "models/model.xml",
-        "sphinx": "models/model.xml",
-        "xapian": "models/model.xml",
+        "sphinx": "",
+        "xapian": "wiki",
         "moses": "",
         "shore": "",
     }
 
     CLIENT_DATA_MAPS = {
         "img-dnn": "img-dnn/mnist",
-        "sphinx": "models/model.xml",
-        "xapian": "models/model.xml",
+        "sphinx": "",
+        "xapian": "terms.in",
         "moses": "",
         "shore": "",
     }
@@ -55,7 +55,7 @@ class NTailDriver(BenchDriver):
     # FIXME: hard-coded
     WARMUP_REQS = {
         "img-dnn": 1000,
-        "sphinx": 1000,
+        "sphinx": 10,
         "xapian": 1000,
         "moses": 1000,
         "shore": 1000,
@@ -63,18 +63,18 @@ class NTailDriver(BenchDriver):
 
     # FIXME: hard-coded
     MAX_REQS = {
-        "img-dnn": 9000,
-        "sphinx": 9000,
-        "xapian": 9000,
-        "moses": 9000,
-        "shore": 9000,
+        "img-dnn": 10000,
+        "sphinx": 10,
+        "xapian": 10000,
+        "moses": 1000,
+        "shore": 1000,
     }
 
-    # FIXME: hard-coded
+    # FIXME: hard-coded as MIN QPS
     QPS = {
-        "img-dnn": 500,
-        "sphinx": 100,
-        "xapian": 100,
+        "img-dnn": 1000,
+        "sphinx": 10,
+        "xapian": 1000,
         "moses": 100,
         "shore": 100,
     }
@@ -84,8 +84,15 @@ class NTailDriver(BenchDriver):
         return bench_name in NTailDriver._benches
 
     def _find_bench_proc(self) -> Optional[psutil.Process]:
+        wl_name = NTailDriver.workload_name
         for process in self._async_proc_info.children(recursive=True):
-            target_name = f'{NTailDriver.workload_name}_server_networked'
+
+            if wl_name == 'sphinx':
+                target_name = f'decoder_server_networked'
+            else:
+                target_name = f'{NTailDriver.workload_name}_server_networked'
+            print(f'[_find_bench_proc] process.name(): {process.name()}, target_name: {target_name}')
+            print(f'[_find_bench_proc] process.pid: {process.pid}, self.async_proc_info.pid: {self.async_proc_info.pid}')
             if process.name() == target_name:
                 return process
         return None
@@ -125,7 +132,7 @@ class NTailDriver(BenchDriver):
             conn = await asyncssh.connect('147.46.240.226', username='dcslab')
 
             print(f'[start_async_client] connected! {conn}')
-
+            """
             client_env_args = {
                 'TBENCH_CLIENT_THREADS': '1',
                 'TBENCH_SERVER': '147.46.242.201',
@@ -135,7 +142,13 @@ class NTailDriver(BenchDriver):
                 'TBENCH_RANDSEED': '0',
                 'TBENCH_MNIST_DIR': str(NTailDriver.client_input_path)+'/'+str(NTailDriver.CLIENT_DATA_MAPS[wl_name])
             }
-            client_bench_cmd = f'/ssd2/tailbench/tailbench/{wl_name}/{wl_name}_client_networked'
+            """
+            client_env_args = await NTailDriver.get_client_env()
+            print(f'[start_async_client] client_env_args: {client_env_args}')
+            if wl_name == 'sphinx':
+                client_bench_cmd = f'/ssd2/tailbench/tailbench/{wl_name}/decoder_client_networked'
+            else:
+                client_bench_cmd = f'/ssd2/tailbench/tailbench/{wl_name}/{wl_name}_client_networked'
             exec_cmd = client_bench_cmd + '\n'
 
             stdin, stdout, stderr = await conn.open_session(env=client_env_args)
@@ -156,7 +169,40 @@ class NTailDriver(BenchDriver):
             print(f'[start_async_client:except] error : {e}')
         finally:
             print(f'[start_async_client:finally] AsyncSSH conn: {conn}')
+            print(f'[start_async_client:finally] exec_cmd: {exec_cmd}')
             print(f'[start_async_client:finally] NTailDriver.reader: {NTailDriver.reader}')
+
+    @staticmethod
+    async def get_client_env() -> Dict:
+        wl_name = NTailDriver.workload_name
+        base_env_args = {
+            'TBENCH_CLIENT_THREADS': '1',
+            'TBENCH_SERVER': '147.46.242.201',
+            'TBENCH_SERVER_PORT': str(NTailDriver.PORT_MAPS[wl_name]),
+            'TBENCH_QPS': str(NTailDriver.QPS[wl_name]),
+            'TBENCH_MINSLEEPNS': '0',
+            'TBENCH_RANDSEED': '0'
+        }
+        # FIXME: hard-coded
+        if wl_name == 'img-dnn':
+            extra_env_args = {
+                'TBENCH_MNIST_DIR': NTailDriver.client_input_path+'/'+str(NTailDriver.CLIENT_DATA_MAPS[wl_name])
+            }
+        elif wl_name == 'sphinx':
+            extra_env_args = {
+                'TBENCH_AN4_CORPUS': NTailDriver.client_input_path+'/'+wl_name,
+                'TBENCH_AUDIO_SAMPLES': NTailDriver.client_base_path+'/'+wl_name+'/'+'audio_samples'
+            }
+        elif wl_name == 'xapian':
+            extra_env_args = {
+                'TBENCH_TERMS_FILE': NTailDriver.client_input_path+'/'+wl_name+'/'+NTailDriver.CLIENT_DATA_MAPS[wl_name]
+            }
+        else:
+            extra_env_args = {}
+
+        client_env_args = dict(base_env_args, **extra_env_args)
+
+        return client_env_args
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         workload_name = self._name
@@ -165,7 +211,7 @@ class NTailDriver(BenchDriver):
         print(f'NTailDriver.workload_name: {NTailDriver.workload_name}')
 
         NTailDriver.server_proc = await self._start_server()
-        print(f'NTailDriver.server_proc.pid: {NTailDriver.server_proc.pid}')
+        print(f'NTailDriver.server_proc.pid: {NTailDriver.server_proc.pid} ')
         time.sleep(2)
         # FIXME: If you want to invoke multiple clients, make the below code
         await NTailDriver.start_async_client()
