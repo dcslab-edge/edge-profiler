@@ -9,7 +9,7 @@ class BenchConfig:
     def __init__(self, workload_name: str, workload_type: str, binding_cores: str, num_of_threads: int = None,
                  numa_mem_nodes: str = None, cpu_freq: float = None, cpu_percent: float = None,
                  cbm_ranges: Union[str, List[str]] = None, gpu_freq: int = None, memory_limit: float = None,
-                 batch_size: int = None, diff_slack: float = None):
+                 batch_size: int = None, qps: int = None,diff_slack: float = None):
         self._workload_name: str = workload_name
         self._workload_type: str = workload_type
         self._binding_cores: str = binding_cores
@@ -21,6 +21,7 @@ class BenchConfig:
         self._gpu_freq: Optional[int] = gpu_freq    # Jetson gpu_freq_max : 1300500000
         self._memory_limit: Optional[float] = memory_limit
         self._batch_size: Optional[int] = batch_size
+        self._qps: Optional[int] = qps
         self._diff_slack: Optional[float] = diff_slack
 
     @property
@@ -68,13 +69,18 @@ class BenchConfig:
         return self._batch_size
 
     @property
+    def qps(self) -> Optional[int]:
+        return self._qps
+
+    @property
     def diff_slack(self) -> Optional[float]:
         return self._diff_slack
 
     def generate_driver(self, identifier: str) -> BenchDriver:
         return bench_driver(self._workload_name, self._workload_type, identifier, self._binding_cores,
                             self._num_of_threads, self._numa_mem_nodes, self._cpu_freq, self._cpu_percent,
-                            self._cbm_ranges, self._gpu_freq, self._memory_limit, self._batch_size, self._diff_slack)
+                            self._cbm_ranges, self._gpu_freq, self._memory_limit, self._batch_size, self._qps,
+                            self._diff_slack)
 
     @staticmethod
     def gen_identifier(target: 'BenchConfig', configs: List['BenchConfig']) -> str:

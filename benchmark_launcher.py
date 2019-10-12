@@ -40,6 +40,7 @@ def parse_workload_cfg(wl_configs: List[Dict[str, Any]]) -> Tuple[BenchConfig, .
                         config.get('gpu_freq', None),
                         config.get('memory_limit', None),
                         config.get('batch_size', None),
+                        config.get('qps', None),
                         config.get('diff_slack', None))
             for config in wl_configs
     )

@@ -64,7 +64,7 @@ class NTailDriver(BenchDriver):
     # FIXME: hard-coded
     MAX_REQS = {
         "img-dnn": 10000,
-        "sphinx": 10,
+        "sphinx": 100,
         "xapian": 10000,
         "moses": 1000,
         "shore": 1000,
@@ -123,8 +123,7 @@ class NTailDriver(BenchDriver):
         print(f'[_start_server] server_exec_cmd: {server_exec_cmd}')
         return await self._cgroup.exec_command(server_exec_cmd, stdout=asyncio.subprocess.PIPE)
 
-    @staticmethod
-    async def start_async_client() -> None:
+    async def start_async_client(self) -> None:
         wl_name = NTailDriver.workload_name
         try:
             print(f'[start_async_client] Trying AsyncSSH connection...')
@@ -143,7 +142,7 @@ class NTailDriver(BenchDriver):
                 'TBENCH_MNIST_DIR': str(NTailDriver.client_input_path)+'/'+str(NTailDriver.CLIENT_DATA_MAPS[wl_name])
             }
             """
-            client_env_args = await NTailDriver.get_client_env()
+            client_env_args = await self.get_client_env()
             print(f'[start_async_client] client_env_args: {client_env_args}')
             if wl_name == 'sphinx':
                 client_bench_cmd = f'/ssd2/tailbench/tailbench/{wl_name}/decoder_client_networked'
@@ -172,14 +171,18 @@ class NTailDriver(BenchDriver):
             print(f'[start_async_client:finally] exec_cmd: {exec_cmd}')
             print(f'[start_async_client:finally] NTailDriver.reader: {NTailDriver.reader}')
 
-    @staticmethod
-    async def get_client_env() -> Dict:
+    async def get_client_env(self) -> Dict:
         wl_name = NTailDriver.workload_name
+        if self._qps is not None:
+            client_qps = str(self._qps)
+        else:
+            client_qps = str(NTailDriver.QPS[wl_name])
+
         base_env_args = {
             'TBENCH_CLIENT_THREADS': '1',
             'TBENCH_SERVER': '147.46.242.201',
             'TBENCH_SERVER_PORT': str(NTailDriver.PORT_MAPS[wl_name]),
-            'TBENCH_QPS': str(NTailDriver.QPS[wl_name]),
+            'TBENCH_QPS': client_qps,
             'TBENCH_MINSLEEPNS': '0',
             'TBENCH_RANDSEED': '0'
         }
@@ -200,7 +203,7 @@ class NTailDriver(BenchDriver):
         else:
             extra_env_args = {}
 
-        client_env_args = dict(base_env_args, **extra_env_args)
+        client_env_args = dict(base_env_args, **extra_env_args)     # Merge `extra_env_args` to `base_env_args`
 
         return client_env_args
 
@@ -214,7 +217,7 @@ class NTailDriver(BenchDriver):
         print(f'NTailDriver.server_proc.pid: {NTailDriver.server_proc.pid} ')
         time.sleep(2)
         # FIXME: If you want to invoke multiple clients, make the below code
-        await NTailDriver.start_async_client()
+        await self.start_async_client()
         print(f'NTailDriver.client_proc: {NTailDriver.reader}')
 
         return NTailDriver.server_proc
