@@ -67,22 +67,37 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
         with (bench_output_path / f'{workload_name}.log').open() as bench_output_fp:
             num_line = 1
             lat_flag = False
+            read_tail_lat_flag = False
             for line in bench_output_fp.readlines():
-                #line = bench_output_fp.readline().rstrip('\n')
+                #line = line.strip('\n')
+                #print(f'workload_name: {workload_name}, line: {line}, lat_flag: {lat_flag}, num_line: {num_line}')
                 if line == "":
                     break
                 if num_line >= 2:
-                    if "times" in line or 'ssd' in workload_name:
-                        lat_flag = True
-                    elif ',' in line and lat_flag: #
-                        # FIXME: hard-coded for tailbench
-                        line = line.rstrip('\n').split(",")
-                        bench_output_results.append((float(line[2])))
-                    else:   # ssd case
-                        if lat_flag:
-                            bench_output_results.append(float(line))
+                    try:
+                        # FIXME: below condition is not working (because they are already parsed)
+                        if "tail" in workload_name or 'ssd' in workload_name:
+                            lat_flag = True
+                            if 'times' in line:
+                                read_tail_lat_flag = True
+                                continue
+                            #print(f'workload_name: {workload_name}, lat_flag: {lat_flag}')
+                        if ',' in line and lat_flag and read_tail_lat_flag: #
+                            # FIXME: ',' can not be used for condition of parsing latencies of ntail-* benchmarks
+                            line = line.rstrip('\n').split(",")
+                            #print(f'line: {line}, float(line[2]): {float(line[2])}')
+                            bench_output_results.append((float(line[2])))
+                        else:   # ssd case
+                            if lat_flag:
+                                #print(f'line: {line}')
+                                bench_output_results.append(float(line))
+                    except (ValueError, IndexError):
+                        #bench_output_results.append(0.0)
+                        pass
+                    finally:
+                        num_line += 1
                 num_line += 1
-        #print(bench_output_results)
+        print(f'len(bench_output_results): {len(bench_output_results)}')
         ret.append(WorkloadResult(workload_name, runtime, metric_map, bench_output_results))
 
     return ret

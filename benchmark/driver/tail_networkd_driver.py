@@ -16,10 +16,10 @@ class NTailDriver(BenchDriver):
                           'ntail-xapian', 'ntail-moses', 'ntail-shore', 'ntail-specjbb'}
     bench_name: str = 'tail'
     _bench_home: str = BenchDriver.get_bench_home(bench_name)
-    workload_name = None
-    server_proc = None
 
-    reader = None    # session used for receiving results by using AsyncSSH
+    workload_names = dict()
+    server_procs = dict()
+    readers = dict()    # session used for receiving results by using AsyncSSH
 
     # FIXME: hard-coded
     server_base_path = '/ssd/tailbench/tailbench-v0.9'
@@ -79,18 +79,25 @@ class NTailDriver(BenchDriver):
         "shore": 100,
     }
 
+    # def __init__(self, workload_name=None, server_proc=None, reader=None):
+    #     super().__init__()
+    #     self._workload_name = workload_name
+    #     self._server_proc = server_proc
+    #     self._reader = reader    # session used for receiving results by using AsyncSSH
+
+
     @staticmethod
     def has(bench_name: str) -> bool:
         return bench_name in NTailDriver._benches
 
     def _find_bench_proc(self) -> Optional[psutil.Process]:
-        wl_name = NTailDriver.workload_name
+        wl_name = NTailDriver.workload_names[self._name]
         for process in self._async_proc_info.children(recursive=True):
 
             if wl_name == 'sphinx':
                 target_name = f'decoder_server_networked'
             else:
-                target_name = f'{NTailDriver.workload_name}_server_networked'
+                target_name = f'{wl_name}_server_networked'
             print(f'[_find_bench_proc] process.name(): {process.name()}, target_name: {target_name}')
             print(f'[_find_bench_proc] process.pid: {process.pid}, self.async_proc_info.pid: {self.async_proc_info.pid}')
             if process.name() == target_name:
@@ -98,11 +105,12 @@ class NTailDriver(BenchDriver):
         return None
 
     async def process_bench_output(self, bench_output_logger: logging.Logger) -> bool:
+        wl_name = NTailDriver.workload_names[self._name]
         ended = False
         finish_words = "end of tail bench"
 
         read_bytes = 1 << 20    # 1M Bytes, This is hard-coded, you can change it if you want to change it!
-        recvd = await NTailDriver.reader.read(read_bytes)
+        recvd = await NTailDriver.readers[wl_name].read(read_bytes)
 
         if finish_words in recvd:
             ended = True
@@ -114,7 +122,7 @@ class NTailDriver(BenchDriver):
         return ended
 
     async def _start_server(self) -> asyncio.subprocess.Process:
-        wl_name = NTailDriver.workload_name  # ex) img-dnn
+        wl_name = NTailDriver.workload_names[self._name]  # ex) img-dnn
 
         # NOTE: Do check shell script if it is working in background
         server_exec_cmd \
@@ -124,7 +132,7 @@ class NTailDriver(BenchDriver):
         return await self._cgroup.exec_command(server_exec_cmd, stdout=asyncio.subprocess.PIPE)
 
     async def start_async_client(self) -> None:
-        wl_name = NTailDriver.workload_name
+        wl_name = NTailDriver.workload_names[self._name]
         try:
             print(f'[start_async_client] Trying AsyncSSH connection...')
 
@@ -151,17 +159,17 @@ class NTailDriver(BenchDriver):
             exec_cmd = client_bench_cmd + '\n'
 
             stdin, stdout, stderr = await conn.open_session(env=client_env_args)
-
+            """
             print(f'[start_async_client] open_session, stdin: {stdin}')
             print(f'[start_async_client] open_session, stdout: {stdout}')
             print(f'[start_async_client] open_session, stderr: {stderr}')
-
+            """
             stdin.write(exec_cmd)
 
-            print(f'[start_async_client] send exec_command, and I\'m alive!! ')
+            #print(f'[start_async_client] send exec_command, and I\'m alive!! ')
 
-            NTailDriver.reader = stdout
-            print(f'[start_async_client] NTailDriver.reader: {NTailDriver.reader}')
+            NTailDriver.readers[wl_name] = stdout
+            print(f'[start_async_client] NTailDriver.reader: {NTailDriver.readers[wl_name]}')
 
         except asyncssh.ChannelOpenError as e:
             print(f'[start_async_client:except] AsyncSSH connection failed!')
@@ -169,10 +177,10 @@ class NTailDriver(BenchDriver):
         finally:
             print(f'[start_async_client:finally] AsyncSSH conn: {conn}')
             print(f'[start_async_client:finally] exec_cmd: {exec_cmd}')
-            print(f'[start_async_client:finally] NTailDriver.reader: {NTailDriver.reader}')
+            print(f'[start_async_client:finally] NTailDriver.reader: {NTailDriver.readers[wl_name]}')
 
     async def get_client_env(self) -> Dict:
-        wl_name = NTailDriver.workload_name
+        wl_name = NTailDriver.workload_names[self._name]
         if self._qps is not None:
             client_qps = str(self._qps)
         else:
@@ -208,16 +216,17 @@ class NTailDriver(BenchDriver):
         return client_env_args
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:
-        workload_name = self._name
+        workload_name = self._name  # ex) ntail-img-dnn
         print(f'workload_name: {workload_name}')
-        NTailDriver.workload_name = workload_name.lstrip('ntail').lstrip('-')
-        print(f'NTailDriver.workload_name: {NTailDriver.workload_name}')
+        NTailDriver.workload_names[workload_name] = workload_name.lstrip('ntail').lstrip('-') # ex) img-dnn
+        print(f'NTailDriver.workload_name: {NTailDriver.workload_names[workload_name]}')
 
-        NTailDriver.server_proc = await self._start_server()
-        print(f'NTailDriver.server_proc.pid: {NTailDriver.server_proc.pid} ')
+        wl_name = NTailDriver.workload_names[workload_name]
+        NTailDriver.server_procs[wl_name] = await self._start_server()
+        print(f'NTailDriver.server_proc.pid: {NTailDriver.server_procs[wl_name].pid} ')
         time.sleep(2)
         # FIXME: If you want to invoke multiple clients, make the below code
         await self.start_async_client()
-        print(f'NTailDriver.client_proc: {NTailDriver.reader}')
+        print(f'NTailDriver.readers: {NTailDriver.readers[wl_name]}')
 
-        return NTailDriver.server_proc
+        return NTailDriver.server_procs[wl_name]

@@ -298,6 +298,7 @@ class Benchmark:
         emc_freq = freq_parser(_tegra_lists[7])
         gr3d_freq = freq_parser(_tegra_lists[9])
 
+        #return [0, 0, 0, 0]
         return [gr3d_freq[0], gr3d_freq[1], emc_freq[0], emc_freq[1]]
 
     def _pause_bench(self):

@@ -9,6 +9,7 @@ from signal import SIGCONT, SIGSTOP
 from typing import Any, Callable, Coroutine, Iterable, List, Optional, Set, Tuple, Type, Union
 from logging import Logger
 
+import logging
 import psutil
 
 from ..utils.cgroup import Cgroup
@@ -259,11 +260,17 @@ class BenchDriver(metaclass=ABCMeta):
 
     @_Decorators.ensure_running
     def pause(self) -> None:
+        logger = logging.getLogger(__name__)
+        logger.info(f'[pause] self._async_proc: {self._async_proc}')
+        logger.info(f'[pause] self._bench_proc_info: {self._bench_proc_info}')
         self._async_proc.send_signal(SIGSTOP)
         self._bench_proc_info.suspend()
 
     @_Decorators.ensure_running
     def resume(self) -> None:
+        logger = logging.getLogger(__name__)
+        logger.info(f'[resume] self._async_proc: {self._async_proc}')
+        logger.info(f'[resume] self._bench_proc_info: {self._bench_proc_info}')
         self._async_proc.send_signal(SIGCONT)
         self._bench_proc_info.resume()
 

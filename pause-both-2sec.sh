@@ -1,0 +1,26 @@
+#!/usr/bin/bash
+
+echo Stop Both \(Server and Client\) for 2 seconds...
+echo Get client pid...
+client_pid=`ssh dcslab@147.46.240.226 "ps aux | grep img-dnn_client_networked | grep -v 'grep'" | awk '{print $2}'`
+echo Get server pid...
+server_pid=`ps aux | grep img-dnn_server_networked | grep -v 'grep' | awk '{print $2}'`
+
+echo Stopping Client \($client_pid\) for 2 seconds...
+#kill -STOP $client_pid
+ssh dcslab@147.46.240.226 "kill -STOP $client_pid"
+echo Stopping Server \($server_pid\) for 2 seconds...
+kill -STOP $server_pid 
+sleep 2
+
+#echo Resuming Client \($client_pid\)...
+#kill -CONT $client_pid
+#ssh dcslab@147.46.240.226 "kill -CONT $client_pid"
+
+echo Resuming Server \($server_pid\)...
+kill -CONT $server_pid
+
+echo Resuming Client \($client_pid\)...
+ssh dcslab@147.46.240.226 "kill -CONT $client_pid"
+
+
