@@ -1,0 +1,66 @@
+{
+  "perf": {
+    "interval": 200,
+    "events": [
+      {
+        "event": "l2_rqsts.miss",
+        "alias": "l2miss"
+      },
+      {
+        "event": "offcore_response.all_requests.llc_miss.any_response",
+        "alias": "l3miss"
+      },
+      "instructions",
+      "cycles",
+	  {
+		"event": "cpu/event=0xb1,umask=0x01,cmask=1,inv=1/",
+		"alias": "stall_cycles"
+	  },
+	  {
+		"event": "cpu/event=0xbb,umask=0x01,offcore_rsp=0x14007e0077/",
+		"alias": "intra_coh"
+	  },
+	  {
+		"event": "cpu/event=0xbb,umask=0x01,offcore_rsp=0x1438000077/",
+		"alias": "inter_coh"
+	  }
+    ]
+  },
+  "tegrastats":{
+    "interval": 200,
+    "events":[
+      {
+        "event": "gr3d",
+        "alias": "gpu_core_util"
+      },
+      {
+        "event": "gr3d_freq",
+        "alias": "gpu_core_freq"
+      },
+      {
+        "event": "emc",
+        "alias": "gpu_emc_util"
+      },
+      {
+        "event": "emc_freq",
+        "alias": "gpu_emc_freq"
+      }
+    ]
+  },
+  "rabbitMQ": {
+    "host": "localhost",
+    "exchange_name": {
+      "workload_creation": "workload_creation"
+    }
+  },
+  "benchmark": {
+	"ssd": "/ssd2/ssd.pytorch",
+	"parsec": "/home/dcslab/ysnam/benchmarks/parsec-3.0/bin",
+	"spec": "/home/dcslab/ysnam/benchmarks/cpu2006",
+	"rodinia": "/home/dcslab/ysnam/benchmarks/rodinia_3.1",
+	"npb": "/home/dcslab/ysnam/benchmarks/NPB3.3.1/NPB3.3-OMP",
+	"cifar10": "/home/dcslab/ysnam/benchmarks/tensorflow/models/tutorials/image/cifar10",
+	"inception": "/home/dcslab/ysnam/benchmarks/tensorflow/models/research/inception/bazel-bin/inception",
+    "tail": "/ssd2/tailbench/tailbench"
+  }
+}

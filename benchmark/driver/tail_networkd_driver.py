@@ -22,10 +22,15 @@ class NTailDriver(BenchDriver):
     readers = dict()    # session used for receiving results by using AsyncSSH
 
     # FIXME: hard-coded
-    server_base_path = '/ssd/tailbench/tailbench-v0.9'
-    client_base_path = '/ssd2/tailbench/tailbench'
-    server_input_path = '/ssd/tailbench/tailbench.inputs'
-    client_input_path = '/ssd2/tailbench/tailbench.inputs'
+    #server_base_path = '/ssd/tailbench/tailbench-v0.9'
+    #client_base_path = '/ssd2/tailbench/tailbench'
+    #server_input_path = '/ssd/tailbench/tailbench.inputs'
+    #client_input_path = '/ssd2/tailbench/tailbench.inputs'
+    server_base_path = '/ssd2/tailbench/tailbench'
+    client_base_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench'
+    server_input_path = '/ssd2/tailbench/tailbench.inputs'
+    client_input_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench.inputs'
+
     # TODO: DATA_MAPS currently works on img-dnn only
     SERVER_DATA_MAPS = {
         "img-dnn": "models/model.xml",
@@ -98,8 +103,8 @@ class NTailDriver(BenchDriver):
                 target_name = f'decoder_server_networked'
             else:
                 target_name = f'{wl_name}_server_networked'
-            print(f'[_find_bench_proc] process.name(): {process.name()}, target_name: {target_name}')
-            print(f'[_find_bench_proc] process.pid: {process.pid}, self.async_proc_info.pid: {self.async_proc_info.pid}')
+            #print(f'[_find_bench_proc] process.name(): {process.name()}, target_name: {target_name}')
+            #print(f'[_find_bench_proc] process.pid: {process.pid}, self.async_proc_info.pid: {self.async_proc_info.pid}')
             if process.name() == target_name:
                 return process
         return None
@@ -136,13 +141,13 @@ class NTailDriver(BenchDriver):
         try:
             print(f'[start_async_client] Trying AsyncSSH connection...')
 
-            conn = await asyncssh.connect('147.46.240.226', username='dcslab')
+            conn = await asyncssh.connect('147.46.240.242', username='dcslab')
 
             print(f'[start_async_client] connected! {conn}')
             """
             client_env_args = {
                 'TBENCH_CLIENT_THREADS': '1',
-                'TBENCH_SERVER': '147.46.242.201',
+                'TBENCH_SERVER': '147.46.240.226',
                 'TBENCH_SERVER_PORT': str(NTailDriver.PORT_MAPS[wl_name]),
                 'TBENCH_QPS': str(NTailDriver.QPS[wl_name]),
                 'TBENCH_MINSLEEPNS': '0',
@@ -153,9 +158,9 @@ class NTailDriver(BenchDriver):
             client_env_args = await self.get_client_env()
             print(f'[start_async_client] client_env_args: {client_env_args}')
             if wl_name == 'sphinx':
-                client_bench_cmd = f'/ssd2/tailbench/tailbench/{wl_name}/decoder_client_networked'
+                client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/decoder_client_networked'
             else:
-                client_bench_cmd = f'/ssd2/tailbench/tailbench/{wl_name}/{wl_name}_client_networked'
+                client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/{wl_name}_client_networked'
             exec_cmd = client_bench_cmd + '\n'
 
             stdin, stdout, stderr = await conn.open_session(env=client_env_args)
@@ -169,7 +174,7 @@ class NTailDriver(BenchDriver):
             #print(f'[start_async_client] send exec_command, and I\'m alive!! ')
 
             NTailDriver.readers[wl_name] = stdout
-            print(f'[start_async_client] NTailDriver.reader: {NTailDriver.readers[wl_name]}')
+            #print(f'[start_async_client] NTailDriver.reader: {NTailDriver.readers[wl_name]}')
 
         except asyncssh.ChannelOpenError as e:
             print(f'[start_async_client:except] AsyncSSH connection failed!')
@@ -188,13 +193,14 @@ class NTailDriver(BenchDriver):
 
         base_env_args = {
             'TBENCH_CLIENT_THREADS': '1',
-            'TBENCH_SERVER': '147.46.242.201',
+            'TBENCH_SERVER': '147.46.240.226',
             'TBENCH_SERVER_PORT': str(NTailDriver.PORT_MAPS[wl_name]),
             'TBENCH_QPS': client_qps,
             'TBENCH_MINSLEEPNS': '0',
             'TBENCH_RANDSEED': '0'
         }
         # FIXME: hard-coded
+        #print(f'[get_client_env] wl_name: {wl_name}')
         if wl_name == 'img-dnn':
             extra_env_args = {
                 'TBENCH_MNIST_DIR': NTailDriver.client_input_path+'/'+str(NTailDriver.CLIENT_DATA_MAPS[wl_name])
@@ -213,6 +219,8 @@ class NTailDriver(BenchDriver):
 
         client_env_args = dict(base_env_args, **extra_env_args)     # Merge `extra_env_args` to `base_env_args`
 
+        #print(f'[get_client_env] extra_env_args: {extra_env_args}, type: {type(extra_env_args)}')
+        #print(f'[get_client_env] client_env_args: {client_env_args}, type: {type(client_env_args)}')
         return client_env_args
 
     async def _launch_bench(self) -> asyncio.subprocess.Process:

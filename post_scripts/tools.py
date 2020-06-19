@@ -97,7 +97,7 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                     finally:
                         num_line += 1
                 num_line += 1
-        print(f'len(bench_output_results): {len(bench_output_results)}')
+        #print(f'len(bench_output_results): {len(bench_output_results)}')
         ret.append(WorkloadResult(workload_name, runtime, metric_map, bench_output_results))
 
     return ret

@@ -39,7 +39,8 @@ def run(workspace: Path, global_cfg_path: Path):
             k = '{}p'.format(int(perc*100))
             try:
                 v = sorted_lat[req_lat_idx]
-                print(f'req_lat_idx: {req_lat_idx}, sorted_lat[{req_lat_idx}]: {v}')
+                #print(f'{int(perc*100)}th %ile, req_lat_idx: {req_lat_idx}, sorted_lat[{req_lat_idx}]: {v}')
+                print(f'{int(perc*100)}th: {v} seconds')
                 percentile_lat[k] = v
             except IndexError:
                 #print(f'req_lat_idx: {req_lat_idx}, len(sorted_lat): {len(sorted_lat)}, value: {v}')

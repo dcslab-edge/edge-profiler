@@ -25,6 +25,7 @@ class ParsecDriver(BenchDriver):
             exec_name = self._name
 
         for process in self._async_proc_info.children(recursive=True):  # type: psutil.Process
+            #print(f'[_find_bench_proc] exec_name: {exec_name}, process: {process.name()}')
             if process.name() == exec_name and process.is_running():
                 return process
 
@@ -36,5 +37,5 @@ class ParsecDriver(BenchDriver):
     async def _launch_bench(self) -> asyncio.subprocess.Process:
         cmd = '{0}/parsecmgmt -a run -p {1} -i native -n {2}' \
             .format(self._bench_home, self._name, self._num_threads)
-
+        print(f'[_lauch_bench] cmd: {cmd}')
         return await self._cgroup.exec_command(cmd, stdout=asyncio.subprocess.DEVNULL)

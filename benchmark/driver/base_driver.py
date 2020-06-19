@@ -16,8 +16,8 @@ from ..utils.cgroup import Cgroup
 from ..utils.dvfs import DVFS
 from ..utils.gpu_dvfs import GPUDVFS
 from ..utils.hyphen import convert_to_hyphen, convert_to_set
-# from ..utils.numa_topology import NumaTopology
-# from ..utils.resctrl import ResCtrl
+from ..utils.numa_topology import NumaTopology
+from ..utils.resctrl import ResCtrl
 from ..utils.machine_type import MachineChecker, NodeType
 
 
@@ -88,7 +88,7 @@ class BenchDriver(metaclass=ABCMeta):
 
         self._group_name = identifier
         self._cgroup: Cgroup = Cgroup(identifier, 'cpuset,cpu,memory')
-        #self._resctrl_group: ResCtrl = ResCtrl()
+        self._resctrl_group: ResCtrl = ResCtrl()
 
     def __del__(self):
         try:
@@ -192,49 +192,50 @@ class BenchDriver(metaclass=ABCMeta):
 
         await self._cgroup.create_group()
         await self._cgroup.assign_cpus(self._binding_cores)
-        print(f'self._binding_cores (cpu id): {self._binding_cores}')
+        print(f'[run] self._binding_cores (cpu id): {self._binding_cores}')
         mem_sockets: str = await self.__get_effective_mem_nodes()
         await self._cgroup.assign_mems(mem_sockets)
-        print(f'self._cpu_percent: {self._cpu_percent}')
+        print(f'[run] self._cpu_percent: {self._cpu_percent}')
         if self._cpu_percent is not None:
             await self._cgroup.limit_cpu_quota(self._cpu_percent)
-        print(f'self._memory_limit: {self._memory_limit}')
+        print(f'[run] self._memory_limit: {self._memory_limit}')
         if self._memory_limit is not None:
             await self._cgroup.limit_memory_percent(self._memory_limit)
 
         self._async_proc = await self._launch_bench()
         self._async_proc_info = psutil.Process(self._async_proc.pid)
 
-        # nodes = await NumaTopology.get_node_topo()
-        #
-        # # Masks for cbm_mask
-        # masks = [ResCtrl.MIN_MASK] * (max(nodes) + 1)
-        #
-        # # change the cbm_ranges to cbm_ranges_list
-        # if self._cbm_ranges is not None:
-        #     if isinstance(self._cbm_ranges, str):
-        #         start, end = map(int, self._cbm_ranges.split('-'))
-        #         mask = ResCtrl.gen_mask(start, end)
-        #
-        #         #for socket_id in convert_to_set(mem_sockets):
-        #         #masks[socket_id] = mask
-        #     else:
-        #         for socket_id, mask_str in enumerate(self._cbm_ranges):
-        #             start, end = map(int, mask_str.split('-'))
-        #             masks[socket_id] = ResCtrl.gen_mask(start, end)
-        # else:
-        #     for socket_id in convert_to_set(mem_sockets):
-        #         masks[socket_id] = ResCtrl.MAX_MASK
+        nodes = await NumaTopology.get_node_topo()
+
+        # Masks for cbm_mask
+        masks = [ResCtrl.MIN_MASK] * (max(nodes) + 1)
+
+        # change the cbm_ranges to cbm_ranges_list
+        print(f'[run] self._cbm_ranges: {self._cbm_ranges}')
+        if self._cbm_ranges is not None:
+            if isinstance(self._cbm_ranges, str):
+                start, end = map(int, self._cbm_ranges.split('-'))
+                mask = ResCtrl.gen_mask(start, end)
+
+                for socket_id in convert_to_set(mem_sockets):
+                    masks[socket_id] = mask
+            else:
+                 for socket_id, mask_str in enumerate(self._cbm_ranges):
+                     start, end = map(int, mask_str.split('-'))
+                     masks[socket_id] = ResCtrl.gen_mask(start, end)
+        else:
+            for socket_id in convert_to_set(mem_sockets):
+                masks[socket_id] = ResCtrl.MAX_MASK
 
         # setting freq to local config
-        print(f'self._cpu_freq: {self._cpu_freq}')
+        print(f'[run] self._cpu_freq: {self._cpu_freq}')
         if self._cpu_freq is not None:
             core_set = convert_to_set(self._binding_cores)
             cpufreq_khz = int(self._cpu_freq * 1000000)
             DVFS.set_freq(cpufreq_khz, core_set)
 
         # FIXME: gpufreq is not per-process config. this is system-wide config.
-        print(f'self._gpu_freq: {self._gpu_freq}')
+        print(f'[run] self._gpu_freq: {self._gpu_freq}')
         if self._gpu_freq is not None:
             gpufreq_hz = int(self._gpu_freq)
             GPUDVFS.set_gpu_freq(gpufreq_hz)
@@ -243,9 +244,9 @@ class BenchDriver(metaclass=ABCMeta):
             self._bench_proc_info = self._find_bench_proc()
             if self._bench_proc_info is not None:
                 await self._rename_group(f'{self._name}_{self._bench_proc_info.pid}')
-                # await self._resctrl_group.create_group()
-                # await self._resctrl_group.assign_llc(*masks)
-                # await self._resctrl_group.add_tasks(self.all_child_tid())
+                await self._resctrl_group.create_group()
+                await self._resctrl_group.assign_llc(*masks)
+                await self._resctrl_group.add_tasks(self.all_child_tid())
                 return
             await asyncio.sleep(0.1)
 
@@ -287,14 +288,14 @@ class BenchDriver(metaclass=ABCMeta):
             return self._numa_mem_nodes
 
         # Local Alloc Case
-        #cpu_topo, mem_topo = await NumaTopology.get_numa_info()
+        cpu_topo, mem_topo = await NumaTopology.get_numa_info()
         bound_cores = convert_to_set(self._binding_cores)
 
         belonged_sockets: List[int] = list()
 
-        #for socket_id, core_ids in cpu_topo.items():
-        #   if len(core_ids & bound_cores) is not 0:
-        #        belonged_sockets.append(socket_id)
+        for socket_id, core_ids in cpu_topo.items():
+            if len(core_ids & bound_cores) is not 0:
+                belonged_sockets.append(socket_id)
 
         return convert_to_hyphen(belonged_sockets)
 
@@ -303,21 +304,24 @@ class BenchDriver(metaclass=ABCMeta):
         self._group_name = new_name
 
         await self._cgroup.rename(new_name)
-        # self._resctrl_group.group_name = self._group_name
+        self._resctrl_group.group_name = self._group_name
 
     async def cleanup(self) -> None:
         await self._cgroup.delete()
-        # await self._resctrl_group.delete()
+        await self._resctrl_group.delete()
 
-    # def read_resctrl(self) -> Coroutine[None, None, Tuple[int, int, int]]:
-        # return self._resctrl_group.read()
+    def read_resctrl(self) -> Coroutine[None, None, Tuple[int, int, int]]:
+        return self._resctrl_group.read()
 
 
 def find_driver(workload_name) -> Type[BenchDriver]:
     node_type = MachineChecker.get_node_type()
     if node_type == NodeType.CPU:
+        from benchmark.driver.parsec_driver import ParsecDriver
         from benchmark.driver.rodinia_driver import RodiniaDriver
-        bench_drivers = (RodiniaDriver,)
+        from benchmark.driver.npb_driver import NPBDriver
+        from benchmark.driver.tail_networkd_driver import NTailDriver
+        bench_drivers = (ParsecDriver, RodiniaDriver, NPBDriver, NTailDriver)
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
         from benchmark.driver.ssd_driver import SSDDriver
@@ -325,7 +329,7 @@ def find_driver(workload_name) -> Type[BenchDriver]:
         from benchmark.driver.tail_networkd_driver import NTailDriver
         bench_drivers = (SparkGPUDriver, ITailDriver, NTailDriver, SSDDriver)
 
-    print(bench_drivers)
+    #print(bench_drivers)
     for driver in bench_drivers:
         if driver.has(workload_name):
             return driver

@@ -369,7 +369,8 @@ def launch(loop: asyncio.AbstractEventLoop, workspace: Path, print_log: bool, pr
         return_when = asyncio.FIRST_COMPLETED if launcher_cfg.stops_with_the_first else asyncio.ALL_COMPLETED
         finished, unfinished = loop.run_until_complete(asyncio.wait(wait_atask_list, return_when=return_when))
 
-        print(f'unfinished: {unfinished}')
+        print(f'[launch] finished: {finished}')
+        print(f'[launch] unfinished: {unfinished}')
         for task in unfinished:
             task.cancel()
 

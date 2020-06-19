@@ -76,7 +76,6 @@ class MachineChecker:
                 tegra_info = fp.readline()
                 if 'tegra186' in tegra_info:
                     gpu_type = 'integrated'
-
         # TODO: Code for checking whether discrete GPU exist
         #gpu_type = 'discrete'
 

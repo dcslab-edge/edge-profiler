@@ -97,10 +97,13 @@ class Cgroup:
         elif node_type == NodeType.DiscreteGPU:
             print(f'DiscreteGPU')
             memory_size = Cgroup.SERVER_MEMORY_SIZE
+        elif node_type == NodeType.CPU:
+            print(f'CPU (Xeon)')
+            memory_size = Cgroup.SERVER_MEMORY_SIZE
         else:
             print(f'Unknown Node Type')
             print(f'node_type: {node_type}')
-            raise ValueError(f'Can not set appropriate memory size "{memory_size}"')
+            #raise ValueError(f'Can not set appropriate memory size "{memory_size}"')
         limit_bytes = int(limit_percentage * memory_size)
         proc = await asyncio.create_subprocess_exec('cgset', '-r', f'memory.limit_in_bytes={limit_bytes}'
                                                     , self._group_name)

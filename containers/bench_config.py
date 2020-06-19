@@ -57,7 +57,7 @@ class BenchConfig:
         return self._cbm_ranges
 
     @property
-    def gpu_freq(self) -> Optional[float]:
+    def gpu_freq(self) -> Optional[int]:
         return self._gpu_freq
 
     @property
