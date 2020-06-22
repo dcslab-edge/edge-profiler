@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import time
+import rdtsc
 from concurrent.futures import CancelledError
 from itertools import chain
 from logging import Formatter, Handler, LogRecord
@@ -171,22 +172,28 @@ class Benchmark:
                                                     self._bench_driver.diff_slack, self._perf.pid,
                                                     self._perf_config.interval, None, None, self._max_benches)
                 rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names, None))
+                #rabbit_mq_handler.setFormatter(RabbitMQFormatter(self._perf_config.event_names, None))
 
             metric_logger = logging.getLogger(f'{self._identifier}-rabbitmq')
             # NOTE: Below rabbit_mq_handler is used to send the logs of metric_logger to rabbitmq
             metric_logger.addHandler(rabbit_mq_handler)
             #metric_logger.addHandler(node_mgr_mq_handler)
 
-            if print_metric_log:
-                metric_logger.addHandler(logging.StreamHandler())
-
             with self._perf_csv.open('w') as fp:
                 # print csv header
-                fp.write(','.join(self._perf_config.event_names))
                 if self._node_type == NodeType.IntegratedGPU:
+                    fp.write(','.join(self._perf_config.event_names))
                     fp.write(',gpu_core_util,gpu_core_freq,gpu_emc_util,gpu_emc_freq'+'\n')
                 elif self._node_type == NodeType.CPU:
-                    fp.write('\n')
+                    xeon_events = chain(self._perf_config.event_names,
+                                        ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem'))
+                    fp.write(','.join(xeon_events)+'\n')
+
+            logger.info(f'[monitor] open file handler')
+            metric_logger.addHandler(logging.FileHandler(self._perf_csv))
+
+            if print_metric_log:
+                metric_logger.addHandler(logging.StreamHandler())
 
             logger.info(f'[monitor] open file handler')
             metric_logger.addHandler(logging.FileHandler(self._perf_csv))
@@ -198,6 +205,10 @@ class Benchmark:
             logger.info(f'[monitor] self._perf: {self._perf}, self._perf.returncode: {self._perf.returncode}')
             # TODO: Perf Ver. can be a problem (ref. to benchmark_copy.py)
             logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
+
+            # added for xeon
+            prev_tsc = rdtsc.get_cycles()
+            _, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
             while self._bench_driver.is_running and self._perf.returncode is None:
                 #logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
                 record = []
@@ -215,6 +226,23 @@ class Benchmark:
                         ignore_flag = True
                         logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
                                      f' and the line is : {line}')
+
+                # added for xeon
+                tmp = rdtsc.get_cycles()
+                #print(f'{tmp-prev_tsc}')
+                record.append(str(tmp - prev_tsc))
+                prev_tsc = tmp
+
+                llc_occupancy, local_mem, total_mem = await self._bench_driver.read_resctrl()
+                record.append(str(llc_occupancy))
+
+                cur_local_mem = local_mem - prev_local_mem
+                record.append(str(cur_local_mem))
+                prev_local_mem = local_mem
+
+                record.append(str(max(total_mem - prev_total_mem - cur_local_mem, 0)))
+                prev_total_mem = total_mem
+
                 if self._node_type == NodeType.IntegratedGPU:
                     # tegra data append(gr3d, gr3dfreq, emc, emcfreq)
                     raw_tegra_line = await self._tegra.stdout.readline()
@@ -434,7 +462,7 @@ class RabbitMQHandler(Handler):
         self._channel.basic_publish(exchange=self._creation_exchange_name, routing_key='',
             body=f'{bench_name},{bench_type},{bench_pid},{bench_diff_slack},{perf_pid},{perf_interval},{tegra_pid},{tegra_interval},{max_benches}')
 
-    def emit(self,record: LogRecord):
+    def emit(self, record: LogRecord):
         formatted: str = self.format(record)
 
         #self._channel.basic_publish(exchange='', routing_key=self._queue_name, body=formatted)
@@ -457,10 +485,11 @@ class RabbitMQHandler(Handler):
 class RabbitMQFormatter(Formatter):
     def __init__(self, perf_events: Generator[str, Any, None], tegra_events: Optional[Generator[str, Any, None]]):
         super().__init__()
-        self._event_names = tuple(perf_events)
+        self._event_names = tuple(perf_events) + ('wall_cycles', 'llc_size', 'local_mem', 'remote_mem', 'req_num')
         if tegra_events is not None:
             self._event_names += tuple(tegra_events)
-        # print(self._event_names)
+        #print(f'perf_events: {perf_events}')
+        #print(f'self._event_names: {self._event_names}')
         self._req_num = 0
 
     @staticmethod

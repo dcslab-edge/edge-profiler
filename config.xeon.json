@@ -4,11 +4,11 @@
     "events": [
       {
         "event": "l2_rqsts.miss",
-        "alias": "l2miss"
+        "alias": "llc_references"
       },
       {
         "event": "offcore_response.all_requests.llc_miss.any_response",
-        "alias": "l3miss"
+        "alias": "llc_misses"
       },
       "instructions",
       "cycles",
