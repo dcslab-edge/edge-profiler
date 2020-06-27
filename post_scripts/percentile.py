@@ -50,10 +50,10 @@ def run(workspace: Path, global_cfg_path: Path):
 
         with (output_path / f'lat_{workload_result.name}.log').open('w') as fp:
             for perc, perc_lat in percentile_lat.items():
-                ret = f'{perc} latency: {round(perc_lat, 4)}\n'
+                ret = f'{perc} latency: {round(perc_lat, 6)}\n'
                 fp.write(ret)
 
-            fp.write(f'Avg. latency: {round(avg_lat, 4)}\n')
+            fp.write(f'Avg. latency: {round(avg_lat, 6)}\n')
 
             for lat in sorted_lat:
                 fp.write(f'{lat}\n')
