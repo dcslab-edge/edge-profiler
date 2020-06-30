@@ -31,7 +31,7 @@ class NTailDriver(BenchDriver):
     server_input_path = '/ssd2/tailbench/tailbench.inputs'
     client_input_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench.inputs'
 
-    # TODO: DATA_MAPS currently works on img-dnn only
+    # TODO: DATA_MAPS currently works on img-dnn only (?)
     SERVER_DATA_MAPS = {
         "img-dnn": "models/model.xml",
         "sphinx": "",
@@ -54,7 +54,8 @@ class NTailDriver(BenchDriver):
         "sphinx": 7312,
         "xapian": 7313,
         "moses": 7314,
-        "shore": 7315,
+        "masstree": 7315,
+        "silo": 7316,
     }
 
     # FIXME: hard-coded
@@ -63,7 +64,8 @@ class NTailDriver(BenchDriver):
         "sphinx": 10,
         "xapian": 1000,
         "moses": 1000,
-        "shore": 1000,
+        "masstree": 1000,
+        "silo": 1000,
     }
 
     # FIXME: hard-coded
@@ -72,7 +74,8 @@ class NTailDriver(BenchDriver):
         "sphinx": 100,
         "xapian": 10000,
         "moses": 1000,
-        "shore": 1000,
+        "masstree": 1000,
+        "silo": 1000,
     }
 
     # FIXME: hard-coded as MIN QPS
@@ -81,7 +84,8 @@ class NTailDriver(BenchDriver):
         "sphinx": 10,
         "xapian": 1000,
         "moses": 100,
-        "shore": 100,
+        "masstree": 100,
+        "silo": 100,
     }
 
     # def __init__(self, workload_name=None, server_proc=None, reader=None):
@@ -101,6 +105,8 @@ class NTailDriver(BenchDriver):
 
             if wl_name == 'sphinx':
                 target_name = f'decoder_server_networked'
+            elif wl_name == 'masstree':
+                target_name = f'mttest_server_networked'
             else:
                 target_name = f'{wl_name}_server_networked'
             #print(f'[_find_bench_proc] process.name(): {process.name()}, target_name: {target_name}')
@@ -130,8 +136,13 @@ class NTailDriver(BenchDriver):
         wl_name = NTailDriver.workload_names[self._name]  # ex) img-dnn
 
         # NOTE: Do check shell script if it is working in background
-        server_exec_cmd \
-            = f'{self._bench_home}/{wl_name}/run-server.sh'
+        if wl_name == 'masstree':
+            server_exec_cmd \
+                = f'{self._bench_home}/{wl_name}/run-server.sh'
+                #= f'sudo {self._bench_home}/{wl_name}/run-server.sh'
+        else:
+            server_exec_cmd \
+                = f'{self._bench_home}/{wl_name}/run-server.sh'
 
         print(f'[_start_server] server_exec_cmd: {server_exec_cmd}')
         return await self._cgroup.exec_command(server_exec_cmd, stdout=asyncio.subprocess.PIPE)
@@ -141,7 +152,8 @@ class NTailDriver(BenchDriver):
         try:
             print(f'[start_async_client] Trying AsyncSSH connection...')
 
-            conn = await asyncssh.connect('147.46.240.242', username='dcslab')
+            #conn = await asyncssh.connect('147.46.240.242', username='dcslab')  # bc3
+            conn = await asyncssh.connect('147.46.240.229', username='dcslab')  # bc4
 
             print(f'[start_async_client] connected! {conn}')
             """
@@ -159,6 +171,10 @@ class NTailDriver(BenchDriver):
             print(f'[start_async_client] client_env_args: {client_env_args}')
             if wl_name == 'sphinx':
                 client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/decoder_client_networked'
+            elif wl_name == 'masstree':
+                # chrt -r 99 : set real-time scheduling attributes of an existing pid with SCEHD_RR policy
+                #client_bench_cmd = f'sudo chrt -r 99 /home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/mttest_client_networked'
+                client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/mttest_client_networked'
             else:
                 client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/{wl_name}_client_networked'
             exec_cmd = client_bench_cmd + '\n'

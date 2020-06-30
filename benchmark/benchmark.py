@@ -210,7 +210,9 @@ class Benchmark:
             prev_tsc = rdtsc.get_cycles()
             _, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
             while self._bench_driver.is_running and self._perf.returncode is None:
-                #logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
+                logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
+                logger.info(f'[monitor] self._perf.returncode ({self._bench_driver.pid}): {self._perf.returncode}')
+                logger.info(f'[monitor] num_of_events ({self._bench_driver.pid}): {num_of_events}')
                 record = []
                 ignore_flag = False
 
@@ -220,11 +222,14 @@ class Benchmark:
                     line = raw_line.decode().strip()
                     try:
                         value = line.split(',')[1]
-                        float(value)
+                        if value == '<not counted>':
+                            value = '0.0'
+                        else:
+                            value = str(float(value))
                         record.append(value)
                     except (IndexError, ValueError) as e:
                         ignore_flag = True
-                        logger.debug(f'a line that perf printed was ignored due to following exception : {e}'
+                        logger.info(f'a line that perf printed was ignored due to following exception : {e}'
                                      f' and the line is : {line}')
 
                 # added for xeon
@@ -242,7 +247,7 @@ class Benchmark:
 
                 record.append(str(max(total_mem - prev_total_mem - cur_local_mem, 0)))
                 prev_total_mem = total_mem
-
+                logger.info(f'[monitor] record ({self._bench_driver.pid}): {record}')
                 if self._node_type == NodeType.IntegratedGPU:
                     # tegra data append(gr3d, gr3dfreq, emc, emcfreq)
                     raw_tegra_line = await self._tegra.stdout.readline()
