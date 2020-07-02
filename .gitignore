@@ -283,3 +283,4 @@ ssd300_*
 # TailBench
 lats.bin
 server.pid
+test.out

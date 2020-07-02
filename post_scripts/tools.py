@@ -64,13 +64,14 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                 for k, v in row.items():  # type: str, str
                     metric_map[k].append(float(v))
 
+        #print(f'[read_result] workload_name: {workload_name}')
         with (bench_output_path / f'{workload_name}.log').open() as bench_output_fp:
             num_line = 1
             lat_flag = False
             read_tail_lat_flag = False
             for line in bench_output_fp.readlines():
                 #line = line.strip('\n')
-                #print(f'workload_name: {workload_name}, line: {line}, lat_flag: {lat_flag}, num_line: {num_line}')
+                #print(f'[read_result] workload_name: {workload_name}, line: {line}, lat_flag: {lat_flag}, num_line: {num_line}')
                 if line == "":
                     break
                 if num_line >= 2:
@@ -85,11 +86,11 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                         if ',' in line and lat_flag and read_tail_lat_flag: #
                             # FIXME: ',' can not be used for condition of parsing latencies of ntail-* benchmarks
                             line = line.rstrip('\n').split(",")
-                            #print(f'line: {line}, float(line[2]): {float(line[2])}')
+                            #print(f'[read_result] line: {line}, float(line[2]): {float(line[2])}')
                             bench_output_results.append((float(line[2])))
                         else:   # ssd case
                             if lat_flag:
-                                #print(f'line: {line}')
+                                #print(f'[read_result] line: {line}')
                                 bench_output_results.append(float(line))
                     except (ValueError, IndexError):
                         #bench_output_results.append(0.0)
@@ -97,7 +98,7 @@ def read_result(workspace: Path) -> List[WorkloadResult]:
                     finally:
                         num_line += 1
                 num_line += 1
-        #print(f'len(bench_output_results): {len(bench_output_results)}')
+        #print(f'[read_result] len(bench_output_results): {len(bench_output_results)}')
         ret.append(WorkloadResult(workload_name, runtime, metric_map, bench_output_results))
 
     return ret

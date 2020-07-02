@@ -32,6 +32,9 @@ def run(workspace: Path, global_cfg_path: Path):
         #print(f'{workload_result.name}, latency_data: {latency_data}')
         sorted_lat: List[float] = sorted(latency_data, reverse=True)    # sorting requests in descending order
         total_reqs = len(latency_data)  # e.g., 200 for ssd_eval
+        #print(f'{workload_result.name}, latency_data: {latency_data}, sorted_lat: {sorted_lat}, total_reqs: {total_reqs}')
+        if total_reqs is 0:
+            continue
         # Counting index for latency_reqs and find latency data according to the percentiles
         #print(f'{workload_result.name}, latency_data: {latency_data}, sorted_lat: {sorted_lat}, total_reqs: {total_reqs}')
         for perc in percentiles:
@@ -40,7 +43,7 @@ def run(workspace: Path, global_cfg_path: Path):
             try:
                 v = sorted_lat[req_lat_idx]
                 #print(f'{int(perc*100)}th %ile, req_lat_idx: {req_lat_idx}, sorted_lat[{req_lat_idx}]: {v}')
-                print(f'{int(perc*100)}th: {v} seconds')
+                #print(f'{int(perc*100)}th: {v} seconds')
                 percentile_lat[k] = v
             except IndexError:
                 #print(f'req_lat_idx: {req_lat_idx}, len(sorted_lat): {len(sorted_lat)}, value: {v}')

@@ -210,9 +210,9 @@ class Benchmark:
             prev_tsc = rdtsc.get_cycles()
             _, prev_local_mem, prev_total_mem = await self._bench_driver.read_resctrl()
             while self._bench_driver.is_running and self._perf.returncode is None:
-                logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
-                logger.info(f'[monitor] self._perf.returncode ({self._bench_driver.pid}): {self._perf.returncode}')
-                logger.info(f'[monitor] num_of_events ({self._bench_driver.pid}): {num_of_events}')
+                #logger.info(f'[monitor] self._bench_driver.is_running ({self._bench_driver.pid}): {self._bench_driver.is_running}')
+                #logger.info(f'[monitor] self._perf.returncode ({self._bench_driver.pid}): {self._perf.returncode}')
+                #logger.info(f'[monitor] num_of_events ({self._bench_driver.pid}): {num_of_events}')
                 record = []
                 ignore_flag = False
 
@@ -239,6 +239,7 @@ class Benchmark:
                 prev_tsc = tmp
 
                 llc_occupancy, local_mem, total_mem = await self._bench_driver.read_resctrl()
+                #cur_llc_occupancy = llc_occupancy - prev_llc_occupancy
                 record.append(str(llc_occupancy))
 
                 cur_local_mem = local_mem - prev_local_mem

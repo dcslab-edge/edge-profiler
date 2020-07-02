@@ -22,14 +22,14 @@ class NTailDriver(BenchDriver):
     readers = dict()    # session used for receiving results by using AsyncSSH
 
     # FIXME: hard-coded
-    #server_base_path = '/ssd/tailbench/tailbench-v0.9'
-    #client_base_path = '/ssd2/tailbench/tailbench'
-    #server_input_path = '/ssd/tailbench/tailbench.inputs'
-    #client_input_path = '/ssd2/tailbench/tailbench.inputs'
-    server_base_path = '/ssd2/tailbench/tailbench'
-    client_base_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench'
-    server_input_path = '/ssd2/tailbench/tailbench.inputs'
-    client_input_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench.inputs'
+    #server_base_path = '/ssd/tailbench/tailbench-v0.9'                 # jetson tx2 (for edge)
+    #client_base_path = '/ssd2/tailbench/tailbench'                     # bc5 (for edge)
+    #server_input_path = '/ssd/tailbench/tailbench.inputs'              # jetson tx2 (for edge)
+    #client_input_path = '/ssd2/tailbench/tailbench.inputs'             # bc5 (for edge)
+    server_base_path = '/ssd2/tailbench/tailbench'                              # bc5 (for xeon-HIS)
+    client_base_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench'      # bc4 (for xeon-HIS)
+    server_input_path = '/ssd2/tailbench/tailbench.inputs'                              # bc5 (for xeon-HIS)
+    client_input_path = '/home/dcslab/ysnam/benchmarks/tailbench/tailbench.inputs'      # bc4 (for xeon-HIS)
 
     # TODO: DATA_MAPS currently works on img-dnn only (?)
     SERVER_DATA_MAPS = {
@@ -136,13 +136,15 @@ class NTailDriver(BenchDriver):
         wl_name = NTailDriver.workload_names[self._name]  # ex) img-dnn
 
         # NOTE: Do check shell script if it is working in background
-        if wl_name == 'masstree':
-            server_exec_cmd \
-                = f'{self._bench_home}/{wl_name}/run-server.sh'
-                #= f'sudo {self._bench_home}/{wl_name}/run-server.sh'
-        else:
-            server_exec_cmd \
-                = f'{self._bench_home}/{wl_name}/run-server.sh'
+        #if wl_name == 'masstree':
+        #    server_exec_cmd \
+        #        = f'{self._bench_home}/{wl_name}/run-server.sh'
+        #        #= f'sudo {self._bench_home}/{wl_name}/run-server.sh'
+        #else:
+        #    server_exec_cmd \
+        #        = f'{self._bench_home}/{wl_name}/run-server.sh'
+        server_exec_cmd \
+            = f'{self._bench_home}/{wl_name}/run-server.sh'
 
         print(f'[_start_server] server_exec_cmd: {server_exec_cmd}')
         return await self._cgroup.exec_command(server_exec_cmd, stdout=asyncio.subprocess.PIPE)
@@ -171,6 +173,8 @@ class NTailDriver(BenchDriver):
             print(f'[start_async_client] client_env_args: {client_env_args}')
             if wl_name == 'sphinx':
                 client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/decoder_client_networked'
+            elif wl_name == 'moses':
+                    client_bench_cmd = f'/home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/bin/moses_client_networked'
             elif wl_name == 'masstree':
                 # chrt -r 99 : set real-time scheduling attributes of an existing pid with SCEHD_RR policy
                 #client_bench_cmd = f'sudo chrt -r 99 /home/dcslab/ysnam/benchmarks/tailbench/tailbench/{wl_name}/mttest_client_networked'
