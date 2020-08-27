@@ -321,7 +321,7 @@ def find_driver(workload_name) -> Type[BenchDriver]:
         from benchmark.driver.rodinia_driver import RodiniaDriver
         from benchmark.driver.npb_driver import NPBDriver
         from benchmark.driver.tail_networkd_driver import NTailDriver
-        bench_drivers = (ParsecDriver, RodiniaDriver, NPBDriver, NTailDriver)
+        bench_drivers = (ParsecDriver, RodiniaDriver, NPBDriver, NTailDriver, SparkGPUDriver,)
     elif node_type == NodeType.IntegratedGPU:
         from benchmark.driver.sparkgpu_driver import SparkGPUDriver
         from benchmark.driver.ssd_driver import SSDDriver
